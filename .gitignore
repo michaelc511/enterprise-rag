@@ -1,0 +1,19 @@
+# Secrets
+.env
+secrets/
+
+# Python
+venv/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Generated vector indexes
+faiss_vector_index/
+vectorstores/
+
+# Source enterprise docs (internal — never commit)
+data/raw/
+
+.DS_Store
