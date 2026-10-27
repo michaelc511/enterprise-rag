@@ -62,9 +62,9 @@ enterprise-rag/
 │   └── index/                      FAISS index (S7)
 │
 ├── blogs/                     One HTML post per category
-│   └── 0-introduction.html         OpsVault, its vendor-risk pain points, and how S1–S21 address them
+│   ├── 0-introduction.html         OpsVault, its vendor-risk pain points, and how S1–S21 address them
+│   └── blog1.html                  Same post without in-page links; "Enterprise SaaS and PaaS Appeal"
 │
-├── blogs/                     Posts: 0-introduction.html, blog1.html
 ├── features.html              Full write-up per step (S1–S21), grouped by phase
 ├── checklist.html             Step status table, generated from checklist.csv (gitignored)
 ├── requirements.txt           Python dependencies (pinned)
