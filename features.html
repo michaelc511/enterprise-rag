@@ -474,22 +474,22 @@
 <ul class="section-index">
   <li class="section-index-phase">Phase 1 — Ingestion & Indexing (offline, once per doc update)</li>
   <li><a href="#s1">S1 — Data Sources</a> <em>(Done)</em></li>
-  <li><a href="#s2">S2 — Document Loading</a></li>
-  <li><a href="#s3">S3 — Meaningful Chunking</a></li>
+  <li><a href="#s2">S2 — Document Loading</a> <em>(Done)</em></li>
+  <li><a href="#s3">S3 — Meaningful Chunking</a> <em>(Done)</em></li>
   <li><a href="#s14">S14 — Semantic / Recursive Chunking</a></li>
   <li><a href="#s4">S4 — Metadata Extraction</a></li>
   <li><a href="#s5">S5 — Security &amp; PII Sanitization</a></li>
-  <li><a href="#s6">S6 — Embeddings</a> <em>(+F2)</em></li>
-  <li><a href="#s7">S7 — Vector Database</a> <em>(+F3)</em></li>
+  <li><a href="#s6">S6 — Embeddings</a> <em>(+F2)</em> <em>(Done)</em></li>
+  <li><a href="#s7">S7 — Vector Database</a> <em>(+F3)</em> <em>(Done)</em></li>
   <li class="section-index-phase">Phase 2 — Pre-retrieval (every query)</li>
   <li><a href="#s8">S8 — Query Rewriting</a></li>
   <li class="section-index-phase">Phase 3 — Retrieval</li>
   <li><a href="#s9">S9 — Hybrid Search (BM25 + Vector)</a></li>
   <li class="section-index-phase">Phase 4 — Post-retrieval</li>
   <li><a href="#s10">S10 — Reranking</a></li>
-  <li><a href="#s11">S11 — Context Assembly</a></li>
+  <li><a href="#s11">S11 — Context Assembly</a> <em>(Done)</em></li>
   <li class="section-index-phase">Phase 5 — Generation (milestone: working RAG demo)</li>
-  <li><a href="#s12">S12 — LLM Generation</a></li>
+  <li><a href="#s12">S12 — LLM Generation</a> <em>(Done)</em></li>
   <li class="section-index-phase">Phase 6 — Evaluation &amp; Observability</li>
   <li><a href="#s13">S13 — Evaluation</a></li>
   <li><a href="#s15">S15 — Advanced Evaluation &amp; Observability</a> <em>(+F6, F11)</em></li>
@@ -913,34 +913,208 @@ redaction rule is "people, not companies".</p>
 
 <p class="f-toc">
 Jump to:
-<a href="#s2-1">S2:1 Document Loading: TBA</a> ·
-<a href="#s2-2">S2:2 Architecture Summary: TBA</a> ·
-<a href="#s2-3">S2:3 Integration Guide: TBA</a> ·
-<a href="#s2-4">S2:4 Testing Guide: TBA</a> ·
-<a href="#s2-5">S2:5 Source Code Reference: TBA</a> ·
-<a href="#s2-6">S2:6 Source Code Reference: TBA</a> ·
-<a href="#s2-7">S2:7 Line-by-Line Deep Dive: TBA</a> ·
-<a href="#s2-8">S2:8 Technical Deep Dive: TBA</a> ·
-<a href="#s2-sysdesign">S2:9 System Design: TBA</a>
+<a href="#s2-1">S2:1 Document Loading</a> ·
+<a href="#s2-2">S2:2 Architecture Summary</a> ·
+<a href="#s2-3">S2:3 Integration Guide</a> ·
+<a href="#s2-4">S2:4 Testing Guide</a> ·
+<a href="#s2-5">S2:5 Source Code Reference (ingest/loader.py)</a> ·
+<a href="#s2-6">S2:6 Source Code Reference (tests/test_loader.py)</a> ·
+<a href="#s2-7">S2:7 Line-by-Line Deep Dive</a> ·
+<a href="#s2-8">S2:8 Technical Deep Dive</a> ·
+<a href="#s2-sysdesign">S2:9 System Design</a>
 </p>
 
-<h3 id="s2-1">S2:1 Document Loading: TBA</h3>
+<div class="note">
+<strong>Status: Implemented.</strong> <code>ingest/loader.py</code> reads every PDF under <code>data/&lt;use-case&gt;/raw/</code> into one LangChain <code>Document</code> per page, with <code>source</code> (e.g. <code>msa/stratocore-cloud-msa.pdf</code>) and <code>page</code> metadata, and strips the footer that repeats on every page. Unlike the PDF's Step 2, it reads PDFs with <code>pypdf</code> directly instead of <code>langchain-community</code>'s <code>PyPDFLoader</code>, which is being sunset.</div>
 
-<h3 id="s2-2">S2:2 Architecture Summary: TBA</h3>
+<p>Maps to <code>checklist.csv</code> row S2, "Document Loading".</p>
 
-<h3 id="s2-3">S2:3 Integration Guide: TBA</h3>
+<table class="blog-box">
+<tr><td>
 
-<h3 id="s2-4">S2:4 Testing Guide: TBA</h3>
+<p class="back-to-top"><a href="#s2">↑ Back to S2</a></p>
+<h3 id="s2-1">S2:1 Document Loading: Every PDF Becomes Clean, Traceable Text</h3>
+<p>S2 turns the 11 PDFs from S1 into text the rest of the pipeline can read. Each page becomes a <code>Document</code>
+whose metadata says exactly where it came from, so every later answer can be traced back to a file and page.</p>
+<h4>The Big Picture: Load, Clean, Label</h4>
+<ul>
+  <li><strong>Load:</strong> walk <code>raw/</code> recursively, one <code>Document</code> per page.</li>
+  <li><strong>Clean:</strong> remove the "synthetic document" footer and page numbers, collapse extra spaces, drop blank pages.</li>
+  <li><strong>Label:</strong> <code>source</code> is the path relative to <code>raw/</code>, so the folder (document type) is part of it; <code>page</code> starts at 1.</li>
+</ul>
+<h4>What's Imported (and Why)</h4>
+<ul>
+  <li><code>pypdf.PdfReader</code> (lazy): extracts each page's text.</li>
+  <li><code>langchain_core.documents.Document</code>: the standard object every LangChain splitter and vector store accepts.</li>
+  <li><code>re</code>: footer patterns and whitespace cleanup.</li>
+</ul>
+<p class="tags"><strong>Tags:</strong> Ingestion, Text Normalization, Data Lineage, pypdf, S2</p>
 
-<h3 id="s2-5">S2:5 Source Code Reference: TBA</h3>
+<p class="back-to-top"><a href="#s2">↑ Back to S2</a></p>
+<h3 id="s2-2">S2:2 Architecture Summary: Raw PDFs In, Page Documents Out</h3>
+<pre class="cmd"><code>data/&lt;use-case&gt;/raw/&lt;type&gt;/*.pdf
+        │  load_documents(raw)
+        ▼
+load_pdf(path)  ── pypdf, page by page ──►  clean_text()
+        ▼
+Document(page_content, metadata={source: &#x27;msa/x.pdf&#x27;, page: 2})  ──►  S3 chunker</code></pre>
 
-<h3 id="s2-6">S2:6 Source Code Reference: TBA</h3>
+<p class="back-to-top"><a href="#s2">↑ Back to S2</a></p>
+<h3 id="s2-3">S2:3 Integration Guide: What Actually Got Touched</h3>
+<table class="cost-table">
+  <tr><th>File</th><th>Change</th></tr>
+  <tr><td><code>ingest/loader.py</code></td><td>New: S2</td></tr>
+  <tr><td><code>ingest/pipeline.py</code></td><td>Calls <code>load_documents()</code> first</td></tr>
+  <tr><td><code>tests/test_loader.py</code></td><td>New: 4 tests</td></tr>
+  <tr><td><code>tests/conftest.py</code></td><td>New: <code>make_pdf</code> fixture writes test PDFs with the real footer</td></tr>
+  <tr><td><code>requirements.txt</code></td><td>Added <code>pypdf</code>, <code>langchain-core</code></td></tr>
+</table>
 
-<h3 id="s2-7">S2:7 Line-by-Line Deep Dive: TBA</h3>
+<h3 class="hl-title" id="s2-4">S2:4 Testing Guide: How to Verify Document Loading (S2)</h3>
+<p><strong class="hl-title">1) Run the unit tests</strong> — mocked, no API key or network.</p>
+<pre class="cmd"><code>source venv/bin/activate
+pytest -v tests/test_loader.py</code></pre>
+<pre class="cmd"><code>tests/test_loader.py::test_clean_text_strips_footer_and_extra_spaces PASSED
+tests/test_loader.py::test_load_documents_one_doc_per_page_with_source_and_page PASSED
+tests/test_loader.py::test_load_documents_skips_blank_pages PASSED
+tests/test_loader.py::test_load_documents_missing_folder_raises PASSED
+============================== 4 passed in 0.07s ===============================</code></pre>
+<p><strong class="hl-title">2) Load the real corpus</strong> — no API key needed.</p><pre class="cmd"><code>python -c &quot;from core import config; from ingest import loader; docs = loader.load_documents(config.raw_dir()); print(len(docs), &#x27;pages&#x27;)&quot;</code></pre><pre class="cmd"><code>27 pages</code></pre>
 
-<h3 id="s2-8">S2:8 Technical Deep Dive: TBA</h3>
+<p class="back-to-top"><a href="#s2">↑ Back to S2</a></p>
+<h3 id="s2-5">S2:5 Source Code Reference: ingest/loader.py — full file</h3>
+<div class="code-block">
+<div class="code-block-title"><span>ingest/loader.py</span><span class="role">load_documents, load_pdf, clean_text (S2) — 43 lines</span></div>
+<pre class="plain-code"><code><span class="ln">  1</span>  # S2: load the source PDFs into documents, normalize text, and strip the repeating page footer.
+<span class="ln">  2</span>  # Uses pypdf directly (one Document per page) rather than langchain-community&#x27;s PyPDFLoader,
+<span class="ln">  3</span>  # which is being sunset.
+<span class="ln">  4</span>  import re
+<span class="ln">  5</span>  from pathlib import Path
+<span class="ln">  6</span>  
+<span class="ln">  7</span>  from langchain_core.documents import Document
+<span class="ln">  8</span>  
+<span class="ln">  9</span>  # S2: boilerplate repeated on every page; left in, it would show up in chunks and answers
+<span class="ln"> 10</span>  FOOTER_PATTERNS = [
+<span class="ln"> 11</span>      re.compile(r&quot;^OpsVault \(fictional\) - synthetic document for the enterprise-rag portfolio project\s*$&quot;, re.M),
+<span class="ln"> 12</span>      re.compile(r&quot;^Page \d+\s*$&quot;, re.M),
+<span class="ln"> 13</span>  ]
+<span class="ln"> 14</span>  
+<span class="ln"> 15</span>  
+<span class="ln"> 16</span>  def clean_text(text: str) -&gt; str:
+<span class="ln"> 17</span>      for pattern in FOOTER_PATTERNS:
+<span class="ln"> 18</span>          text = pattern.sub(&quot;&quot;, text)
+<span class="ln"> 19</span>      text = re.sub(r&quot;[ \t]+&quot;, &quot; &quot;, text)  # S2: collapse runs of spaces pypdf inserts between words
+<span class="ln"> 20</span>      text = re.sub(r&quot; *\n *&quot;, &quot;\n&quot;, text)
+<span class="ln"> 21</span>      text = re.sub(r&quot;\n{3,}&quot;, &quot;\n\n&quot;, text)
+<span class="ln"> 22</span>      return text.strip()
+<span class="ln"> 23</span>  
+<span class="ln"> 24</span>  
+<span class="ln"> 25</span>  def load_pdf(path: Path, root: Path) -&gt; list[Document]:
+<span class="ln"> 26</span>      from pypdf import PdfReader
+<span class="ln"> 27</span>  
+<span class="ln"> 28</span>      docs = []
+<span class="ln"> 29</span>      for number, page in enumerate(PdfReader(path).pages, start=1):
+<span class="ln"> 30</span>          text = clean_text(page.extract_text() or &quot;&quot;)
+<span class="ln"> 31</span>          if text:  # S2: skip blank pages so they never become empty chunks
+<span class="ln"> 32</span>              # S2: source is relative to raw/, so citations read &quot;msa/stratocore-cloud-msa.pdf&quot;
+<span class="ln"> 33</span>              docs.append(Document(page_content=text, metadata={&quot;source&quot;: path.relative_to(root).as_posix(), &quot;page&quot;: number}))
+<span class="ln"> 34</span>      return docs
+<span class="ln"> 35</span>  
+<span class="ln"> 36</span>  
+<span class="ln"> 37</span>  def load_documents(raw: Path) -&gt; list[Document]:
+<span class="ln"> 38</span>      if not raw.is_dir():
+<span class="ln"> 39</span>          raise FileNotFoundError(f&quot;No source folder at {raw}; put the PDFs in data/&lt;use-case&gt;/raw/&lt;type&gt;/&quot;)
+<span class="ln"> 40</span>      docs = []
+<span class="ln"> 41</span>      for path in sorted(raw.rglob(&quot;*.pdf&quot;)):
+<span class="ln"> 42</span>          docs.extend(load_pdf(path, raw))
+<span class="ln"> 43</span>      return docs</code></pre>
+</div>
 
-<h3 id="s2-sysdesign">S2:9 System Design: TBA</h3>
+<p class="back-to-top"><a href="#s2">↑ Back to S2</a></p>
+<h3 id="s2-6">S2:6 Source Code Reference: tests/test_loader.py — full file</h3>
+<div class="code-block">
+<div class="code-block-title"><span>tests/test_loader.py</span><span class="role">4 loader tests (S2) — 33 lines</span></div>
+<pre class="plain-code"><code><span class="ln">  1</span>  # S2: loader tests against PDFs generated in tmp_path.
+<span class="ln">  2</span>  import pytest
+<span class="ln">  3</span>  
+<span class="ln">  4</span>  from ingest import loader
+<span class="ln">  5</span>  
+<span class="ln">  6</span>  
+<span class="ln">  7</span>  def test_clean_text_strips_footer_and_extra_spaces() -&gt; None:
+<span class="ln">  8</span>      raw = (&quot;7.2   Encryption at rest.\n\n\n\nOpsVault (fictional) - synthetic document for the &quot;
+<span class="ln">  9</span>             &quot;enterprise-rag portfolio project\nPage 2\n&quot;)
+<span class="ln"> 10</span>      assert loader.clean_text(raw) == &quot;7.2 Encryption at rest.&quot;
+<span class="ln"> 11</span>  
+<span class="ln"> 12</span>  
+<span class="ln"> 13</span>  def test_load_documents_one_doc_per_page_with_source_and_page(make_pdf, tmp_path) -&gt; None:
+<span class="ln"> 14</span>      make_pdf(&quot;msa/acme-msa.pdf&quot;, [&quot;8.1 Notify within 48 hours.&quot;, &quot;12.2 Super cap of 2x fees.&quot;])
+<span class="ln"> 15</span>      make_pdf(&quot;nda/acme-nda.pdf&quot;, [&quot;Mutual NDA.&quot;])
+<span class="ln"> 16</span>  
+<span class="ln"> 17</span>      docs = loader.load_documents(tmp_path / &quot;raw&quot;)
+<span class="ln"> 18</span>  
+<span class="ln"> 19</span>      assert [(d.metadata[&quot;source&quot;], d.metadata[&quot;page&quot;]) for d in docs] == [
+<span class="ln"> 20</span>          (&quot;msa/acme-msa.pdf&quot;, 1), (&quot;msa/acme-msa.pdf&quot;, 2), (&quot;nda/acme-nda.pdf&quot;, 1)]
+<span class="ln"> 21</span>      assert docs[0].page_content == &quot;8.1 Notify within 48 hours.&quot;
+<span class="ln"> 22</span>      assert all(&quot;synthetic document&quot; not in d.page_content for d in docs)
+<span class="ln"> 23</span>  
+<span class="ln"> 24</span>  
+<span class="ln"> 25</span>  def test_load_documents_skips_blank_pages(make_pdf, tmp_path) -&gt; None:
+<span class="ln"> 26</span>      make_pdf(&quot;sow/blank.pdf&quot;, [&quot;Real text.&quot;, &quot;&quot;])  # second page holds only the footer
+<span class="ln"> 27</span>      docs = loader.load_documents(tmp_path / &quot;raw&quot;)
+<span class="ln"> 28</span>      assert len(docs) == 1
+<span class="ln"> 29</span>  
+<span class="ln"> 30</span>  
+<span class="ln"> 31</span>  def test_load_documents_missing_folder_raises(tmp_path) -&gt; None:
+<span class="ln"> 32</span>      with pytest.raises(FileNotFoundError, match=&quot;data/&lt;use-case&gt;/raw&quot;):
+<span class="ln"> 33</span>          loader.load_documents(tmp_path / &quot;nope&quot;)</code></pre>
+</div>
+
+<p class="back-to-top"><a href="#s2">↑ Back to S2</a></p>
+<h3 id="s2-7">S2:7 Line-by-Line Deep Dive: From PDF Page to Document</h3>
+<ul>
+  <li><strong><code>FOOTER_PATTERNS</code></strong> match the footer line and "Page N" only when they're a whole line (<code>^…$</code> with <code>re.M</code>), so a clause that mentions a page number isn't touched.</li>
+  <li><strong><code>clean_text()</code></strong> removes the footer, collapses runs of spaces, trims spaces around line breaks, and limits blank lines to one, keeping paragraph breaks that S3 uses as split points.</li>
+  <li><strong><code>load_pdf()</code></strong> numbers pages from 1, skips pages that are empty after cleaning, and stores <code>source</code> relative to <code>raw/</code>.</li>
+  <li><strong><code>load_documents()</code></strong> sorts paths so loading order (and chunk order) is the same on every run, and fails with a message naming the folder when it doesn't exist.</li>
+</ul>
+
+<p class="back-to-top"><a href="#s2">↑ Back to S2</a></p>
+<h3 id="s2-8">S2:8 Technical Deep Dive: What Loading Handles, and What It Doesn't</h3>
+<ul>
+  <li><strong>Handles:</strong> text PDFs, nested type folders, repeated footers, blank pages.</li>
+  <li><strong>Tables flatten:</strong> a table comes out one cell per line. The text survives, but row/column structure doesn't.</li>
+  <li><strong>No OCR:</strong> a scanned PDF has no text layer and would load as empty pages. Real contract sets need an OCR pass.</li>
+  <li><strong>Footer list is specific:</strong> the patterns match this corpus's footer. A new use case with different boilerplate adds its own patterns.</li>
+</ul>
+
+<p class="back-to-top"><a href="#s2">↑ Back to S2</a></p>
+<h3 id="s2-sysdesign">S2:9 System Design <a class="h3-up" href="#s2" title="Back to S2">↑ S2</a></h3>
+<p>Talking points for a system-design discussion.</p>
+<ul>
+  <li><strong>Data lineage:</strong> every chunk carries file and page from the very first step, which is what makes cited answers possible</li>
+  <li><strong>Failure modes:</strong> scanned PDFs and complex tables are the usual extraction failures; both are listed, neither is silent</li>
+  <li><strong>Dependencies:</strong> using <code>pypdf</code> directly removes one dependency on a package that's being sunset</li>
+</ul>
+<p><strong>Trade-offs:</strong></p>
+<table class="cost-table">
+  <tr><th>Decision</th><th>Pros</th><th>Cons</th><th>Alternative / when to switch</th></tr>
+  <tr><td>pypdf directly instead of PyPDFLoader</td><td>One fewer dependency on langchain-community; full control of cleaning</td><td>A few more lines of code</td><td>Switch to a layout-aware parser (e.g. unstructured) for tables or scans</td></tr>
+  <tr><td>One Document per page</td><td>Page numbers for citations come free</td><td>A clause can span a page break</td><td>S3's overlap and S14's clause-aware splitting reduce this</td></tr>
+  <tr><td>Regex footer stripping</td><td>Simple, fast, exact</td><td>Specific to this corpus</td><td>Detect lines repeated on most pages automatically</td></tr>
+</table>
+
+<p class="back-to-top"><a href="#s2">↑ Back to S2</a></p>
+<p class="tags"><strong>Tags:</strong> Ingestion, Text Normalization, Data Lineage, pypdf, S2</p>
+
+<p><strong>What was built:</strong></p>
+<ul>
+  <li><code>ingest/loader.py</code> — <code>load_documents()</code>, <code>load_pdf()</code>, <code>clean_text()</code></li>
+  <li><code>tests/test_loader.py</code> — 4 tests; <code>tests/conftest.py</code> — <code>make_pdf</code> and <code>fake_embeddings</code> fixtures</li>
+  <li>verified on the real corpus: 11 files, 27 pages, footer stripped from every page</li>
+</ul>
+
+</td></tr>
+</table>
 
 <p class="back-to-top"><a href="#top">↑ Back to top</a></p>
 
@@ -948,34 +1122,164 @@ Jump to:
 
 <p class="f-toc">
 Jump to:
-<a href="#s3-1">S3:1 Meaningful Chunking: TBA</a> ·
-<a href="#s3-2">S3:2 Architecture Summary: TBA</a> ·
-<a href="#s3-3">S3:3 Integration Guide: TBA</a> ·
-<a href="#s3-4">S3:4 Testing Guide: TBA</a> ·
-<a href="#s3-5">S3:5 Source Code Reference: TBA</a> ·
-<a href="#s3-6">S3:6 Source Code Reference: TBA</a> ·
-<a href="#s3-7">S3:7 Line-by-Line Deep Dive: TBA</a> ·
-<a href="#s3-8">S3:8 Technical Deep Dive: TBA</a> ·
-<a href="#s3-sysdesign">S3:9 System Design: TBA</a>
+<a href="#s3-1">S3:1 Meaningful Chunking</a> ·
+<a href="#s3-2">S3:2 Architecture Summary</a> ·
+<a href="#s3-3">S3:3 Integration Guide</a> ·
+<a href="#s3-4">S3:4 Testing Guide</a> ·
+<a href="#s3-5">S3:5 Source Code Reference (ingest/chunker.py)</a> ·
+<a href="#s3-6">S3:6 Source Code Reference (tests/test_chunker.py)</a> ·
+<a href="#s3-7">S3:7 Line-by-Line Deep Dive</a> ·
+<a href="#s3-8">S3:8 Technical Deep Dive</a> ·
+<a href="#s3-sysdesign">S3:9 System Design</a>
 </p>
 
-<h3 id="s3-1">S3:1 Meaningful Chunking: TBA</h3>
+<div class="note">
+<strong>Status: Implemented.</strong> <code>ingest/chunker.py</code> splits each page into chunks of up to 1,000 characters with 150 characters of overlap, preferring paragraph, line, and sentence breaks. The 27 pages become 56 chunks, each keeping its page's <code>source</code> and <code>page</code>. S14 will later make the splitting clause-aware in this same file.</div>
 
-<h3 id="s3-2">S3:2 Architecture Summary: TBA</h3>
+<p>Maps to <code>checklist.csv</code> row S3, "Meaningful Chunking".</p>
 
-<h3 id="s3-3">S3:3 Integration Guide: TBA</h3>
+<table class="blog-box">
+<tr><td>
 
-<h3 id="s3-4">S3:4 Testing Guide: TBA</h3>
+<p class="back-to-top"><a href="#s3">↑ Back to S3</a></p>
+<h3 id="s3-1">S3:1 Meaningful Chunking: Pieces Small Enough to Match One Clause</h3>
+<p>A whole page holds several clauses, so retrieving pages would hand the LLM a lot of unrelated text. S3 cuts
+pages into pieces about the size of one or two clauses, so a question about breach notification retrieves the
+notification clause rather than everything else on that page.</p>
+<h4>What's Imported (and Why)</h4>
+<ul>
+  <li><code>RecursiveCharacterTextSplitter</code> (lazy): tries the biggest natural break first (blank line, then line, then sentence, then word) and only cuts mid-word as a last resort.</li>
+</ul>
+<p class="tags"><strong>Tags:</strong> Chunking, Token Budgets, RecursiveCharacterTextSplitter, S3</p>
 
-<h3 id="s3-5">S3:5 Source Code Reference: TBA</h3>
+<p class="back-to-top"><a href="#s3">↑ Back to S3</a></p>
+<h3 id="s3-2">S3:2 Architecture Summary: Page Documents In, Chunk Documents Out</h3>
+<pre class="cmd"><code>Document (1 page, ~800–2,000 chars)
+        │  chunk_documents(docs, 1000, 150)
+        ▼
+chunk 1  ─┐  150-char overlap
+chunk 2  ─┘  ...   each keeps {source, page}  ──►  S6 embeddings</code></pre>
 
-<h3 id="s3-6">S3:6 Source Code Reference: TBA</h3>
+<p class="back-to-top"><a href="#s3">↑ Back to S3</a></p>
+<h3 id="s3-3">S3:3 Integration Guide: What Actually Got Touched</h3>
+<table class="cost-table">
+  <tr><th>File</th><th>Change</th></tr>
+  <tr><td><code>ingest/chunker.py</code></td><td>New: S3</td></tr>
+  <tr><td><code>ingest/pipeline.py</code></td><td>Calls <code>chunk_documents()</code> after loading</td></tr>
+  <tr><td><code>tests/test_chunker.py</code></td><td>New: 3 tests</td></tr>
+  <tr><td><code>requirements.txt</code></td><td>Added <code>langchain-text-splitters</code></td></tr>
+</table>
 
-<h3 id="s3-7">S3:7 Line-by-Line Deep Dive: TBA</h3>
+<h3 class="hl-title" id="s3-4">S3:4 Testing Guide: How to Verify Meaningful Chunking (S3)</h3>
+<p><strong class="hl-title">1) Run the unit tests</strong> — mocked, no API key or network.</p>
+<pre class="cmd"><code>source venv/bin/activate
+pytest -v tests/test_chunker.py</code></pre>
+<pre class="cmd"><code>tests/test_chunker.py::test_chunks_respect_size_and_keep_metadata PASSED
+tests/test_chunker.py::test_short_page_stays_one_chunk PASSED
+tests/test_chunker.py::test_whitespace_only_pages_produce_no_chunks PASSED
+============================== 3 passed in 0.05s ===============================</code></pre>
+<p><strong class="hl-title">2) Chunk the real corpus</strong> — no API key needed.</p><pre class="cmd"><code>python -c &quot;from core import config; from ingest import loader, chunker; c = chunker.chunk_documents(loader.load_documents(config.raw_dir())); s=[len(x.page_content) for x in c]; print(len(c), &#x27;chunks&#x27;, min(s), sum(s)//len(s), max(s))&quot;</code></pre><pre class="cmd"><code>56 chunks 188 780 999</code></pre>
 
-<h3 id="s3-8">S3:8 Technical Deep Dive: TBA</h3>
+<p class="back-to-top"><a href="#s3">↑ Back to S3</a></p>
+<h3 id="s3-5">S3:5 Source Code Reference: ingest/chunker.py — full file</h3>
+<div class="code-block">
+<div class="code-block-title"><span>ingest/chunker.py</span><span class="role">chunk_documents (S3) — 19 lines</span></div>
+<pre class="plain-code"><code><span class="ln">  1</span>  # S3: split documents into chunks by size. S14 later adds clause-aware splitting here.
+<span class="ln">  2</span>  from langchain_core.documents import Document
+<span class="ln">  3</span>  
+<span class="ln">  4</span>  # S3: ~1000 characters holds one or two contract clauses; the overlap keeps a clause that
+<span class="ln">  5</span>  # straddles a boundary readable in at least one chunk
+<span class="ln">  6</span>  CHUNK_SIZE = 1000
+<span class="ln">  7</span>  CHUNK_OVERLAP = 150
+<span class="ln">  8</span>  
+<span class="ln">  9</span>  
+<span class="ln"> 10</span>  def chunk_documents(docs: list[Document], chunk_size: int = CHUNK_SIZE, chunk_overlap: int = CHUNK_OVERLAP) -&gt; list[Document]:
+<span class="ln"> 11</span>      from langchain_text_splitters import RecursiveCharacterTextSplitter
+<span class="ln"> 12</span>  
+<span class="ln"> 13</span>      splitter = RecursiveCharacterTextSplitter(
+<span class="ln"> 14</span>          chunk_size=chunk_size,
+<span class="ln"> 15</span>          chunk_overlap=chunk_overlap,
+<span class="ln"> 16</span>          separators=[&quot;\n\n&quot;, &quot;\n&quot;, &quot;. &quot;, &quot; &quot;, &quot;&quot;],
+<span class="ln"> 17</span>      )
+<span class="ln"> 18</span>      # S3: split_documents copies each page&#x27;s metadata (source, page) onto every chunk from it
+<span class="ln"> 19</span>      return [c for c in splitter.split_documents(docs) if c.page_content.strip()]</code></pre>
+</div>
 
-<h3 id="s3-sysdesign">S3:9 System Design: TBA</h3>
+<p class="back-to-top"><a href="#s3">↑ Back to S3</a></p>
+<h3 id="s3-6">S3:6 Source Code Reference: tests/test_chunker.py — full file</h3>
+<div class="code-block">
+<div class="code-block-title"><span>tests/test_chunker.py</span><span class="role">3 chunker tests (S3) — 26 lines</span></div>
+<pre class="plain-code"><code><span class="ln">  1</span>  # S3: chunker tests.
+<span class="ln">  2</span>  from langchain_core.documents import Document
+<span class="ln">  3</span>  
+<span class="ln">  4</span>  from ingest import chunker
+<span class="ln">  5</span>  
+<span class="ln">  6</span>  
+<span class="ln">  7</span>  def _clauses(n: int) -&gt; str:
+<span class="ln">  8</span>      return &quot;\n\n&quot;.join(f&quot;{i}.1 Clause {i} says the provider will do thing number {i} on time.&quot; for i in range(1, n + 1))
+<span class="ln">  9</span>  
+<span class="ln"> 10</span>  
+<span class="ln"> 11</span>  def test_chunks_respect_size_and_keep_metadata() -&gt; None:
+<span class="ln"> 12</span>      doc = Document(page_content=_clauses(60), metadata={&quot;source&quot;: &quot;msa/a.pdf&quot;, &quot;page&quot;: 3})
+<span class="ln"> 13</span>      chunks = chunker.chunk_documents([doc], chunk_size=300, chunk_overlap=50)
+<span class="ln"> 14</span>  
+<span class="ln"> 15</span>      assert len(chunks) &gt; 1
+<span class="ln"> 16</span>      assert all(len(c.page_content) &lt;= 300 for c in chunks)
+<span class="ln"> 17</span>      assert all(c.metadata == {&quot;source&quot;: &quot;msa/a.pdf&quot;, &quot;page&quot;: 3} for c in chunks)
+<span class="ln"> 18</span>  
+<span class="ln"> 19</span>  
+<span class="ln"> 20</span>  def test_short_page_stays_one_chunk() -&gt; None:
+<span class="ln"> 21</span>      doc = Document(page_content=&quot;Mutual NDA. Term: 3 years.&quot;, metadata={&quot;source&quot;: &quot;nda/a.pdf&quot;, &quot;page&quot;: 1})
+<span class="ln"> 22</span>      assert [c.page_content for c in chunker.chunk_documents([doc])] == [&quot;Mutual NDA. Term: 3 years.&quot;]
+<span class="ln"> 23</span>  
+<span class="ln"> 24</span>  
+<span class="ln"> 25</span>  def test_whitespace_only_pages_produce_no_chunks() -&gt; None:
+<span class="ln"> 26</span>      assert chunker.chunk_documents([Document(page_content=&quot;   \n\n &quot;, metadata={})]) == []</code></pre>
+</div>
+
+<p class="back-to-top"><a href="#s3">↑ Back to S3</a></p>
+<h3 id="s3-7">S3:7 Line-by-Line Deep Dive: Why These Numbers</h3>
+<ul>
+  <li><strong><code>CHUNK_SIZE = 1000</code></strong> characters is roughly 200 words: one or two contract clauses. Small enough to be specific, big enough to keep a clause whole.</li>
+  <li><strong><code>CHUNK_OVERLAP = 150</code></strong> repeats the end of one chunk at the start of the next, so a clause cut at a boundary is still readable in one of them.</li>
+  <li><strong><code>separators</code></strong> add <code>". "</code> to the default list, so a cut prefers the end of a sentence over the middle of one.</li>
+  <li><strong>The filter</strong> drops chunks that are only whitespace, so nothing empty gets embedded or retrieved.</li>
+</ul>
+
+<p class="back-to-top"><a href="#s3">↑ Back to S3</a></p>
+<h3 id="s3-8">S3:8 Technical Deep Dive: What Size-Based Chunking Gets Wrong</h3>
+<ul>
+  <li><strong>It doesn't know what a clause is.</strong> "7.2 Encryption at rest" can be split from its own text. S14 adds clause-aware splitting.</li>
+  <li><strong>Tables get cut across rows.</strong> A SOC 2 control table can be split mid-row, separating a control from its result.</li>
+  <li><strong>Results:</strong> 56 chunks, 188 to 999 characters, average 780.</li>
+</ul>
+
+<p class="back-to-top"><a href="#s3">↑ Back to S3</a></p>
+<h3 id="s3-sysdesign">S3:9 System Design <a class="h3-up" href="#s3" title="Back to S3">↑ S3</a></h3>
+<p>Talking points for a system-design discussion.</p>
+<ul>
+  <li><strong>Retrieval quality:</strong> chunk size is the first lever on precision: too big and answers get vague, too small and clauses lose context</li>
+  <li><strong>Evals:</strong> the right size is an empirical question; S13 can compare 500 / 1,000 / 1,500 against the answer key</li>
+</ul>
+<p><strong>Trade-offs:</strong></p>
+<table class="cost-table">
+  <tr><th>Decision</th><th>Pros</th><th>Cons</th><th>Alternative / when to switch</th></tr>
+  <tr><td>1,000 chars / 150 overlap</td><td>One or two clauses per chunk</td><td>Some clauses still split</td><td>Tune with S13 evals; S14 clause-aware splitting</td></tr>
+  <tr><td>Character count, not tokens</td><td>No tokenizer needed; predictable</td><td>Token count varies by text</td><td>Use a token-based splitter if prompts get close to limits</td></tr>
+</table>
+
+<p class="back-to-top"><a href="#s3">↑ Back to S3</a></p>
+<p class="tags"><strong>Tags:</strong> Chunking, Token Budgets, RecursiveCharacterTextSplitter, S3</p>
+
+<p><strong>What was built:</strong></p>
+<ul>
+  <li><code>ingest/chunker.py</code> — <code>chunk_documents()</code>, <code>CHUNK_SIZE</code>, <code>CHUNK_OVERLAP</code></li>
+  <li><code>tests/test_chunker.py</code> — 3 tests</li>
+  <li>verified on the real corpus: 56 chunks, 188–999 characters</li>
+</ul>
+
+</td></tr>
+</table>
 
 <p class="back-to-top"><a href="#top">↑ Back to top</a></p>
 
@@ -1088,34 +1392,209 @@ Jump to:
 
 <p class="f-toc">
 Jump to:
-<a href="#s6-1">S6:1 Embeddings: TBA</a> ·
-<a href="#s6-2">S6:2 Architecture Summary: TBA</a> ·
-<a href="#s6-3">S6:3 Integration Guide: TBA</a> ·
-<a href="#s6-4">S6:4 Testing Guide: TBA</a> ·
-<a href="#s6-5">S6:5 Source Code Reference: TBA</a> ·
-<a href="#s6-6">S6:6 Source Code Reference: TBA</a> ·
-<a href="#s6-7">S6:7 Line-by-Line Deep Dive: TBA</a> ·
-<a href="#s6-8">S6:8 Technical Deep Dive: TBA</a> ·
-<a href="#s6-sysdesign">S6:9 System Design: TBA</a>
+<a href="#s6-1">S6:1 Embeddings</a> ·
+<a href="#s6-2">S6:2 Architecture Summary</a> ·
+<a href="#s6-3">S6:3 Integration Guide</a> ·
+<a href="#s6-4">S6:4 Testing Guide</a> ·
+<a href="#s6-5">S6:5 Source Code Reference (core/llm.py)</a> ·
+<a href="#s6-6">S6:6 Source Code Reference (tests/test_llm.py)</a> ·
+<a href="#s6-7">S6:7 Line-by-Line Deep Dive</a> ·
+<a href="#s6-8">S6:8 Technical Deep Dive</a> ·
+<a href="#s6-sysdesign">S6:9 System Design</a>
 </p>
 
-<h3 id="s6-1">S6:1 Embeddings: TBA</h3>
+<div class="note">
+<strong>Status: Implemented.</strong> <code>core/llm.py</code> picks the provider (OpenAI if <code>OPENAI_API_KEY</code> is set, otherwise Azure) and builds both the embeddings model (<code>text-embedding-3-small</code>) and the chat model (<code>gpt-4o-mini</code>). Reuses restaurant-ai-platform's <strong>F2</strong> provider switch, but model names and Azure settings come from <code>.env</code> instead of being hard-coded.</div>
 
-<h3 id="s6-2">S6:2 Architecture Summary: TBA</h3>
+<p>Maps to <code>checklist.csv</code> row S6, "Embeddings (+F2)".</p>
 
-<h3 id="s6-3">S6:3 Integration Guide: TBA</h3>
+<table class="blog-box">
+<tr><td>
 
-<h3 id="s6-4">S6:4 Testing Guide: TBA</h3>
+<p class="back-to-top"><a href="#s6">↑ Back to S6</a></p>
+<h3 id="s6-1">S6:1 Embeddings: Turning Text Into Vectors, From One Shared Provider</h3>
+<p>Embeddings turn each chunk (and later each question) into a list of numbers that captures its meaning, so
+"breach notification window" can match "notify within 48 hours" even with no words in common. S6 sets up the model
+that does this, in one shared file that S8, S12, and S13 also use for the chat model.</p>
+<h4>What's Imported (and Why)</h4>
+<ul>
+  <li><code>langchain_openai</code> (lazy): <code>OpenAIEmbeddings</code>, <code>ChatOpenAI</code>, and their Azure versions.</li>
+  <li><code>core.config</code>: default model names.</li>
+</ul>
+<p class="tags"><strong>Tags:</strong> Embeddings, Provider Abstraction, OpenAI, Azure OpenAI, F2, S6</p>
 
-<h3 id="s6-5">S6:5 Source Code Reference: TBA</h3>
+<p class="back-to-top"><a href="#s6">↑ Back to S6</a></p>
+<h3 id="s6-2">S6:2 Architecture Summary: One Switch, Two Models</h3>
+<pre class="cmd"><code>.env ──► provider():  OPENAI_API_KEY?  → openai
+                      AZURE_OPENAI_API_KEY? → azure
+                      neither → clear error
 
-<h3 id="s6-6">S6:6 Source Code Reference: TBA</h3>
+build_embeddings()  → OpenAIEmbeddings(text-embedding-3-small)   used by S7 build + search
+build_llm()         → ChatOpenAI(gpt-4o-mini, temperature 0)    used by S12</code></pre>
 
-<h3 id="s6-7">S6:7 Line-by-Line Deep Dive: TBA</h3>
+<p class="back-to-top"><a href="#s6">↑ Back to S6</a></p>
+<h3 id="s6-3">S6:3 Integration Guide: What Actually Got Touched</h3>
+<table class="cost-table">
+  <tr><th>File</th><th>Change</th></tr>
+  <tr><td><code>core/llm.py</code></td><td>New: S6/F2</td></tr>
+  <tr><td><code>core/config.py</code></td><td>New: defaults, <code>.env</code> loading, paths</td></tr>
+  <tr><td><code>.env.example</code></td><td>New: which keys to set</td></tr>
+  <tr><td><code>tests/test_llm.py</code></td><td>New: 3 tests</td></tr>
+  <tr><td><code>requirements.txt</code></td><td>Added <code>langchain-openai</code>, <code>openai</code>, <code>tiktoken</code>, <code>python-dotenv</code></td></tr>
+</table>
 
-<h3 id="s6-8">S6:8 Technical Deep Dive: TBA</h3>
+<h3 class="hl-title" id="s6-4">S6:4 Testing Guide: How to Verify Embeddings (S6)</h3>
+<p><strong class="hl-title">1) Run the unit tests</strong> — mocked, no API key or network.</p>
+<pre class="cmd"><code>source venv/bin/activate
+pytest -v tests/test_llm.py</code></pre>
+<pre class="cmd"><code>tests/test_llm.py::test_no_key_raises_clear_error PASSED
+tests/test_llm.py::test_openai_key_wins_and_models_come_from_env PASSED
+tests/test_llm.py::test_azure_used_when_only_azure_key_set PASSED
+============================== 3 passed in 0.68s ===============================</code></pre>
+<p><strong class="hl-title">2) Check the no-key message</strong></p><pre class="cmd"><code>python rag.py ask &quot;test&quot;</code></pre><pre class="cmd"><code>Error: Set OPENAI_API_KEY (or AZURE_OPENAI_API_KEY) in the .env file at the repo root</code></pre><p><strong class="hl-title">3) With your key</strong> — copy <code>.env.example</code> to <code>.env</code>, set <code>OPENAI_API_KEY</code>, then run S7's build.</p>
 
-<h3 id="s6-sysdesign">S6:9 System Design: TBA</h3>
+<p class="back-to-top"><a href="#s6">↑ Back to S6</a></p>
+<h3 id="s6-5">S6:5 Source Code Reference: core/llm.py — full file</h3>
+<div class="code-block">
+<div class="code-block-title"><span>core/llm.py</span><span class="role">provider, build_embeddings, build_llm (S6/F2) — 49 lines</span></div>
+<pre class="plain-code"><code><span class="ln">  1</span>  # S6/F2: LLM and embeddings provider selection (OpenAI or Azure), shared by S6, S8, S12, S13.
+<span class="ln">  2</span>  # Same rule as restaurant-ai-platform&#x27;s core/llm.py (OpenAI key first, then Azure), but models and
+<span class="ln">  3</span>  # Azure settings come from env vars instead of being hard-coded.
+<span class="ln">  4</span>  import os
+<span class="ln">  5</span>  
+<span class="ln">  6</span>  from core.config import DEFAULT_EMBEDDINGS_MODEL, DEFAULT_LLM_MODEL
+<span class="ln">  7</span>  
+<span class="ln">  8</span>  AZURE_API_VERSION = &quot;2024-10-21&quot;
+<span class="ln">  9</span>  
+<span class="ln"> 10</span>  
+<span class="ln"> 11</span>  def provider() -&gt; str:
+<span class="ln"> 12</span>      if os.environ.get(&quot;OPENAI_API_KEY&quot;):
+<span class="ln"> 13</span>          return &quot;openai&quot;
+<span class="ln"> 14</span>      if os.environ.get(&quot;AZURE_OPENAI_API_KEY&quot;):
+<span class="ln"> 15</span>          return &quot;azure&quot;
+<span class="ln"> 16</span>      raise RuntimeError(&quot;Set OPENAI_API_KEY (or AZURE_OPENAI_API_KEY) in the .env file at the repo root&quot;)
+<span class="ln"> 17</span>  
+<span class="ln"> 18</span>  
+<span class="ln"> 19</span>  def build_embeddings():
+<span class="ln"> 20</span>      # S6: lazy import so tests and `rag.py --help` don&#x27;t pay for langchain_openai
+<span class="ln"> 21</span>      model = os.environ.get(&quot;EMBEDDINGS_MODEL&quot;, DEFAULT_EMBEDDINGS_MODEL)
+<span class="ln"> 22</span>      if provider() == &quot;openai&quot;:
+<span class="ln"> 23</span>          from langchain_openai import OpenAIEmbeddings
+<span class="ln"> 24</span>  
+<span class="ln"> 25</span>          return OpenAIEmbeddings(model=model)
+<span class="ln"> 26</span>      from langchain_openai import AzureOpenAIEmbeddings
+<span class="ln"> 27</span>  
+<span class="ln"> 28</span>      return AzureOpenAIEmbeddings(
+<span class="ln"> 29</span>          azure_endpoint=os.environ[&quot;AZURE_OPENAI_ENDPOINT&quot;],
+<span class="ln"> 30</span>          api_version=os.environ.get(&quot;AZURE_OPENAI_API_VERSION&quot;, AZURE_API_VERSION),
+<span class="ln"> 31</span>          deployment=os.environ.get(&quot;AZURE_EMBEDDINGS_DEPLOYMENT&quot;, model),
+<span class="ln"> 32</span>      )
+<span class="ln"> 33</span>  
+<span class="ln"> 34</span>  
+<span class="ln"> 35</span>  def build_llm():
+<span class="ln"> 36</span>      # S12: temperature 0 so the same question over the same context gives the same answer
+<span class="ln"> 37</span>      model = os.environ.get(&quot;LLM_MODEL&quot;, DEFAULT_LLM_MODEL)
+<span class="ln"> 38</span>      if provider() == &quot;openai&quot;:
+<span class="ln"> 39</span>          from langchain_openai import ChatOpenAI
+<span class="ln"> 40</span>  
+<span class="ln"> 41</span>          return ChatOpenAI(model=model, temperature=0)
+<span class="ln"> 42</span>      from langchain_openai import AzureChatOpenAI
+<span class="ln"> 43</span>  
+<span class="ln"> 44</span>      return AzureChatOpenAI(
+<span class="ln"> 45</span>          azure_endpoint=os.environ[&quot;AZURE_OPENAI_ENDPOINT&quot;],
+<span class="ln"> 46</span>          api_version=os.environ.get(&quot;AZURE_OPENAI_API_VERSION&quot;, AZURE_API_VERSION),
+<span class="ln"> 47</span>          deployment_name=os.environ.get(&quot;AZURE_LLM_DEPLOYMENT&quot;, model),
+<span class="ln"> 48</span>          temperature=0,
+<span class="ln"> 49</span>      )</code></pre>
+</div>
+
+<p class="back-to-top"><a href="#s6">↑ Back to S6</a></p>
+<h3 id="s6-6">S6:6 Source Code Reference: tests/test_llm.py — full file</h3>
+<div class="code-block">
+<div class="code-block-title"><span>tests/test_llm.py</span><span class="role">3 provider tests (S6) — 35 lines</span></div>
+<pre class="plain-code"><code><span class="ln">  1</span>  # S6/F2: provider selection tests. Constructing the clients makes no network call.
+<span class="ln">  2</span>  import pytest
+<span class="ln">  3</span>  
+<span class="ln">  4</span>  from core import llm
+<span class="ln">  5</span>  
+<span class="ln">  6</span>  
+<span class="ln">  7</span>  @pytest.fixture(autouse=True)
+<span class="ln">  8</span>  def clean_env(monkeypatch):
+<span class="ln">  9</span>      for name in (&quot;OPENAI_API_KEY&quot;, &quot;AZURE_OPENAI_API_KEY&quot;, &quot;AZURE_OPENAI_ENDPOINT&quot;, &quot;LLM_MODEL&quot;, &quot;EMBEDDINGS_MODEL&quot;):
+<span class="ln"> 10</span>          monkeypatch.delenv(name, raising=False)
+<span class="ln"> 11</span>  
+<span class="ln"> 12</span>  
+<span class="ln"> 13</span>  def test_no_key_raises_clear_error() -&gt; None:
+<span class="ln"> 14</span>      with pytest.raises(RuntimeError, match=&quot;OPENAI_API_KEY&quot;):
+<span class="ln"> 15</span>          llm.provider()
+<span class="ln"> 16</span>  
+<span class="ln"> 17</span>  
+<span class="ln"> 18</span>  def test_openai_key_wins_and_models_come_from_env(monkeypatch) -&gt; None:
+<span class="ln"> 19</span>      monkeypatch.setenv(&quot;OPENAI_API_KEY&quot;, &quot;sk-test&quot;)
+<span class="ln"> 20</span>      monkeypatch.setenv(&quot;AZURE_OPENAI_API_KEY&quot;, &quot;az-test&quot;)
+<span class="ln"> 21</span>      monkeypatch.setenv(&quot;LLM_MODEL&quot;, &quot;gpt-test&quot;)
+<span class="ln"> 22</span>  
+<span class="ln"> 23</span>      assert llm.provider() == &quot;openai&quot;
+<span class="ln"> 24</span>      assert type(llm.build_llm()).__name__ == &quot;ChatOpenAI&quot;
+<span class="ln"> 25</span>      assert llm.build_llm().model_name == &quot;gpt-test&quot;
+<span class="ln"> 26</span>      assert llm.build_embeddings().model == &quot;text-embedding-3-small&quot;
+<span class="ln"> 27</span>  
+<span class="ln"> 28</span>  
+<span class="ln"> 29</span>  def test_azure_used_when_only_azure_key_set(monkeypatch) -&gt; None:
+<span class="ln"> 30</span>      monkeypatch.setenv(&quot;AZURE_OPENAI_API_KEY&quot;, &quot;az-test&quot;)
+<span class="ln"> 31</span>      monkeypatch.setenv(&quot;AZURE_OPENAI_ENDPOINT&quot;, &quot;https://example.openai.azure.com&quot;)
+<span class="ln"> 32</span>  
+<span class="ln"> 33</span>      assert llm.provider() == &quot;azure&quot;
+<span class="ln"> 34</span>      assert type(llm.build_llm()).__name__ == &quot;AzureChatOpenAI&quot;
+<span class="ln"> 35</span>      assert type(llm.build_embeddings()).__name__ == &quot;AzureOpenAIEmbeddings&quot;</code></pre>
+</div>
+
+<p class="back-to-top"><a href="#s6">↑ Back to S6</a></p>
+<h3 id="s6-7">S6:7 Line-by-Line Deep Dive: How the Provider Is Chosen</h3>
+<ul>
+  <li><strong><code>provider()</code></strong> checks <code>OPENAI_API_KEY</code> first, then <code>AZURE_OPENAI_API_KEY</code>, and raises one clear error if neither is set. <code>rag.py</code> prints it as a single line instead of a traceback.</li>
+  <li><strong><code>build_embeddings()</code></strong> reads <code>EMBEDDINGS_MODEL</code> (default <code>text-embedding-3-small</code>). For Azure, the deployment name and endpoint come from <code>.env</code>.</li>
+  <li><strong><code>build_llm()</code></strong> uses <code>temperature=0</code>, so the same question over the same context gives the same answer, which keeps evals repeatable.</li>
+  <li><strong>Lazy imports</strong> keep <code>rag.py --help</code> and the tests fast.</li>
+</ul>
+
+<p class="back-to-top"><a href="#s6">↑ Back to S6</a></p>
+<h3 id="s6-8">S6:8 Technical Deep Dive: What This Covers, and What It Doesn't</h3>
+<ul>
+  <li><strong>Covers:</strong> OpenAI and Azure OpenAI, model names from <code>.env</code>.</li>
+  <li><strong>Not yet:</strong> other providers (Anthropic, a local Ollama model), or a different model per job (cheap for rewriting, strong for answers, a different provider as judge).</li>
+  <li><strong>Changing the embeddings model needs a rebuild.</strong> Each model gets its own index folder (<code>index/&lt;model&gt;/</code>), so old and new vectors are never mixed.</li>
+  <li><strong>Data leaves the machine.</strong> Every chunk is sent to the embeddings API. Fine for synthetic data; S5 redacts before this point for real data.</li>
+</ul>
+
+<p class="back-to-top"><a href="#s6">↑ Back to S6</a></p>
+<h3 id="s6-sysdesign">S6:9 System Design <a class="h3-up" href="#s6" title="Back to S6">↑ S6</a></h3>
+<p>Talking points for a system-design discussion.</p>
+<ul>
+  <li><strong>Vendor flexibility:</strong> the provider is a setting, not code, so a customer that requires Azure is a <code>.env</code> change</li>
+  <li><strong>Privacy:</strong> embedding sends document text to the provider; that's why S5 redaction runs before S6 in the full pipeline</li>
+  <li><strong>Evals:</strong> the same model writing and judging answers inflates scores; a separate judge provider is a later upgrade</li>
+</ul>
+<p><strong>Trade-offs:</strong></p>
+<table class="cost-table">
+  <tr><th>Decision</th><th>Pros</th><th>Cons</th><th>Alternative / when to switch</th></tr>
+  <tr><td>text-embedding-3-small</td><td>Cheap and good enough for 56 chunks</td><td>Not the strongest model</td><td>Try text-embedding-3-large if S13 recall is low</td></tr>
+  <tr><td>Key presence picks the provider</td><td>Matches restaurant F2; zero config</td><td>Can't keep both keys and choose Azure</td><td>Add an explicit LLM_PROVIDER setting</td></tr>
+  <tr><td>Hosted API</td><td>No model to run</td><td>Documents leave the machine</td><td>Local embeddings (Ollama / sentence-transformers) for sensitive data</td></tr>
+</table>
+
+<p class="back-to-top"><a href="#s6">↑ Back to S6</a></p>
+<p class="tags"><strong>Tags:</strong> Embeddings, Provider Abstraction, OpenAI, Azure OpenAI, F2, S6</p>
+
+<p><strong>What was built:</strong></p>
+<ul>
+  <li><code>core/llm.py</code> — <code>provider()</code>, <code>build_embeddings()</code>, <code>build_llm()</code></li>
+  <li><code>core/config.py</code> — <code>load_env()</code>, <code>flag()</code>, <code>raw_dir()</code>, <code>index_dir()</code></li>
+  <li><code>.env.example</code>; <code>tests/test_llm.py</code> — 3 tests</li>
+</ul>
+
+</td></tr>
+</table>
 
 <p class="back-to-top"><a href="#top">↑ Back to top</a></p>
 
@@ -1123,34 +1602,184 @@ Jump to:
 
 <p class="f-toc">
 Jump to:
-<a href="#s7-1">S7:1 Vector Database: TBA</a> ·
-<a href="#s7-2">S7:2 Architecture Summary: TBA</a> ·
-<a href="#s7-3">S7:3 Integration Guide: TBA</a> ·
-<a href="#s7-4">S7:4 Testing Guide: TBA</a> ·
-<a href="#s7-5">S7:5 Source Code Reference: TBA</a> ·
-<a href="#s7-6">S7:6 Source Code Reference: TBA</a> ·
-<a href="#s7-7">S7:7 Line-by-Line Deep Dive: TBA</a> ·
-<a href="#s7-8">S7:8 Technical Deep Dive: TBA</a> ·
-<a href="#s7-sysdesign">S7:9 System Design: TBA</a>
+<a href="#s7-1">S7:1 Vector Database</a> ·
+<a href="#s7-2">S7:2 Architecture Summary</a> ·
+<a href="#s7-3">S7:3 Integration Guide</a> ·
+<a href="#s7-4">S7:4 Testing Guide</a> ·
+<a href="#s7-5">S7:5 Source Code Reference (ingest/vectorstore.py)</a> ·
+<a href="#s7-6">S7:6 Source Code Reference (tests/test_vectorstore.py)</a> ·
+<a href="#s7-7">S7:7 Line-by-Line Deep Dive</a> ·
+<a href="#s7-8">S7:8 Technical Deep Dive</a> ·
+<a href="#s7-sysdesign">S7:9 System Design</a>
 </p>
 
-<h3 id="s7-1">S7:1 Vector Database: TBA</h3>
+<div class="note">
+<strong>Status: Implemented.</strong> <code>ingest/vectorstore.py</code> embeds every chunk and saves a FAISS index to <code>data/&lt;use-case&gt;/index/&lt;model&gt;/</code>; <code>retrieval/search.py</code> returns the 4 nearest chunks to a question. Reuses restaurant-ai-platform's <strong>F3</strong> caching: <code>rag.py build</code> embeds once, and every <code>ask</code> loads the saved index instead of re-embedding.</div>
 
-<h3 id="s7-2">S7:2 Architecture Summary: TBA</h3>
+<p>Maps to <code>checklist.csv</code> row S7, "Vector Database (+F3)".</p>
 
-<h3 id="s7-3">S7:3 Integration Guide: TBA</h3>
+<table class="blog-box">
+<tr><td>
 
-<h3 id="s7-4">S7:4 Testing Guide: TBA</h3>
+<p class="back-to-top"><a href="#s7">↑ Back to S7</a></p>
+<h3 id="s7-1">S7:1 Vector Database: Build Once, Search Every Question</h3>
+<p>S7 stores the 56 chunk vectors so a question can find its nearest chunks in milliseconds. It has two halves:
+building and saving the index (offline, <code>rag.py build</code>) and searching it (every question).</p>
+<h4>What's Imported (and Why)</h4>
+<ul>
+  <li><code>FAISS</code> from <code>langchain_community.vectorstores</code> (lazy): an in-process vector index that saves to two files, with no server to run.</li>
+</ul>
+<p class="tags"><strong>Tags:</strong> Vector Store, FAISS, ANN Search, Caching, F3, S7</p>
 
-<h3 id="s7-5">S7:5 Source Code Reference: TBA</h3>
+<p class="back-to-top"><a href="#s7">↑ Back to S7</a></p>
+<h3 id="s7-2">S7:2 Architecture Summary: Build Offline, Load Per Session</h3>
+<pre class="cmd"><code>rag.py build:  chunks ──S6 embed──► FAISS.from_documents ──► save_local(index/text-embedding-3-small/)
 
-<h3 id="s7-6">S7:6 Source Code Reference: TBA</h3>
+rag.py ask:    load_local(index/...)  ──►  search(question, k=4)  ──►  4 nearest chunks ──► S11</code></pre>
 
-<h3 id="s7-7">S7:7 Line-by-Line Deep Dive: TBA</h3>
+<p class="back-to-top"><a href="#s7">↑ Back to S7</a></p>
+<h3 id="s7-3">S7:3 Integration Guide: What Actually Got Touched</h3>
+<table class="cost-table">
+  <tr><th>File</th><th>Change</th></tr>
+  <tr><td><code>ingest/vectorstore.py</code></td><td>New: S7 build/save/load</td></tr>
+  <tr><td><code>retrieval/search.py</code></td><td>New: S7 search (S9 upgrades it)</td></tr>
+  <tr><td><code>ingest/pipeline.py</code></td><td>New: <code>build_index()</code> runs S2 → S3 → S6 → S7</td></tr>
+  <tr><td><code>rag.py</code></td><td><code>build</code> command</td></tr>
+  <tr><td><code>tests/test_vectorstore.py</code></td><td>New: 3 tests</td></tr>
+  <tr><td><code>tests/test_pipeline.py</code></td><td>New: 1 end-to-end build test</td></tr>
+  <tr><td><code>requirements.txt</code></td><td>Added <code>faiss-cpu</code>, <code>langchain-community</code></td></tr>
+</table>
 
-<h3 id="s7-8">S7:8 Technical Deep Dive: TBA</h3>
+<h3 class="hl-title" id="s7-4">S7:4 Testing Guide: How to Verify Vector Database (S7)</h3>
+<p><strong class="hl-title">1) Run the unit tests</strong> — mocked, no API key or network.</p>
+<pre class="cmd"><code>source venv/bin/activate
+pytest -v tests/test_vectorstore.py</code></pre>
+<pre class="cmd"><code>tests/test_vectorstore.py::test_build_saves_and_reload_finds_same_chunks PASSED
+tests/test_vectorstore.py::test_load_missing_index_says_run_build PASSED
+tests/test_vectorstore.py::test_build_with_no_chunks_raises PASSED
+============================== 3 passed in 0.15s ===============================</code></pre>
+<p><strong class="hl-title">2) Test the build glue</strong></p><pre class="cmd"><code>source venv/bin/activate
+pytest -v tests/test_pipeline.py</code></pre><pre class="cmd"><code>tests/test_pipeline.py::test_build_index_runs_load_chunk_embed_store PASSED
+============================== 1 passed in 0.14s ===============================</code></pre><p><strong class="hl-title">3) Build the real index</strong></p><p><em>Needs your <code>OPENAI_API_KEY</code> in <code>.env</code>. The counts below come from a run with fake embeddings, which gives the same file, page, and chunk counts as a real run.</em></p><pre class="cmd"><code>python rag.py build</code></pre><pre class="cmd"><code>Indexed 11 files, 27 pages, 56 chunks -&gt; .../data/vendor-risk-compliance/index/text-embedding-3-small</code></pre>
 
-<h3 id="s7-sysdesign">S7:9 System Design: TBA</h3>
+<p class="back-to-top"><a href="#s7">↑ Back to S7</a></p>
+<h3 id="s7-5">S7:5 Source Code Reference: ingest/vectorstore.py — full file</h3>
+<div class="code-block">
+<div class="code-block-title"><span>ingest/vectorstore.py</span><span class="role">build_index, load_index (S7/F3) — 25 lines</span></div>
+<pre class="plain-code"><code><span class="ln">  1</span>  # S7/F3: build, save, and load the FAISS index per use case, so docs aren&#x27;t re-embedded every run.
+<span class="ln">  2</span>  from pathlib import Path
+<span class="ln">  3</span>  
+<span class="ln">  4</span>  from langchain_core.documents import Document
+<span class="ln">  5</span>  
+<span class="ln">  6</span>  
+<span class="ln">  7</span>  def build_index(chunks: list[Document], embeddings, path: Path):
+<span class="ln">  8</span>      from langchain_community.vectorstores import FAISS
+<span class="ln">  9</span>  
+<span class="ln"> 10</span>      if not chunks:
+<span class="ln"> 11</span>          raise ValueError(&quot;No chunks to index; check that data/&lt;use-case&gt;/raw/ has PDFs&quot;)
+<span class="ln"> 12</span>      # S6: from_documents is where every chunk is sent to the embeddings model
+<span class="ln"> 13</span>      index = FAISS.from_documents(chunks, embeddings)
+<span class="ln"> 14</span>      path.mkdir(parents=True, exist_ok=True)
+<span class="ln"> 15</span>      index.save_local(str(path))
+<span class="ln"> 16</span>      return index
+<span class="ln"> 17</span>  
+<span class="ln"> 18</span>  
+<span class="ln"> 19</span>  def load_index(embeddings, path: Path):
+<span class="ln"> 20</span>      from langchain_community.vectorstores import FAISS
+<span class="ln"> 21</span>  
+<span class="ln"> 22</span>      if not (path / &quot;index.faiss&quot;).exists():
+<span class="ln"> 23</span>          raise FileNotFoundError(f&quot;No index at {path}; run `python rag.py build` first&quot;)
+<span class="ln"> 24</span>      # F3: the index is a pickle written by our own build step, never downloaded, so loading it is safe
+<span class="ln"> 25</span>      return FAISS.load_local(str(path), embeddings, allow_dangerous_deserialization=True)</code></pre>
+</div>
+
+<p class="back-to-top"><a href="#s7">↑ Back to S7</a></p>
+<h3 id="s7-6">S7:6 Source Code Reference: tests/test_vectorstore.py — full file</h3>
+<div class="code-block">
+<div class="code-block-title"><span>tests/test_vectorstore.py</span><span class="role">3 index and search tests (S7) — 34 lines</span></div>
+<pre class="plain-code"><code><span class="ln">  1</span>  # S7/F3: index build, save, reload, and search, with fake embeddings.
+<span class="ln">  2</span>  import pytest
+<span class="ln">  3</span>  from langchain_core.documents import Document
+<span class="ln">  4</span>  
+<span class="ln">  5</span>  from ingest import vectorstore
+<span class="ln">  6</span>  from retrieval.search import search
+<span class="ln">  7</span>  
+<span class="ln">  8</span>  CHUNKS = [
+<span class="ln">  9</span>      Document(page_content=&quot;Notify within 48 hours.&quot;, metadata={&quot;source&quot;: &quot;msa/a.pdf&quot;, &quot;page&quot;: 1}),
+<span class="ln"> 10</span>      Document(page_content=&quot;AES-256 at rest.&quot;, metadata={&quot;source&quot;: &quot;msa/a.pdf&quot;, &quot;page&quot;: 2}),
+<span class="ln"> 11</span>      Document(page_content=&quot;Mutual NDA.&quot;, metadata={&quot;source&quot;: &quot;nda/b.pdf&quot;, &quot;page&quot;: 1}),
+<span class="ln"> 12</span>  ]
+<span class="ln"> 13</span>  
+<span class="ln"> 14</span>  
+<span class="ln"> 15</span>  def test_build_saves_and_reload_finds_same_chunks(fake_embeddings, tmp_path) -&gt; None:
+<span class="ln"> 16</span>      vectorstore.build_index(CHUNKS, fake_embeddings, tmp_path / &quot;idx&quot;)
+<span class="ln"> 17</span>      assert (tmp_path / &quot;idx&quot; / &quot;index.faiss&quot;).exists()
+<span class="ln"> 18</span>  
+<span class="ln"> 19</span>      reloaded = vectorstore.load_index(fake_embeddings, tmp_path / &quot;idx&quot;)
+<span class="ln"> 20</span>      # DeterministicFakeEmbedding maps identical text to identical vectors, so an exact match ranks first
+<span class="ln"> 21</span>      top = search(reloaded, &quot;AES-256 at rest.&quot;, k=2)
+<span class="ln"> 22</span>      assert len(top) == 2
+<span class="ln"> 23</span>      assert top[0].page_content == &quot;AES-256 at rest.&quot;
+<span class="ln"> 24</span>      assert top[0].metadata == {&quot;source&quot;: &quot;msa/a.pdf&quot;, &quot;page&quot;: 2}
+<span class="ln"> 25</span>  
+<span class="ln"> 26</span>  
+<span class="ln"> 27</span>  def test_load_missing_index_says_run_build(fake_embeddings, tmp_path) -&gt; None:
+<span class="ln"> 28</span>      with pytest.raises(FileNotFoundError, match=&quot;rag.py build&quot;):
+<span class="ln"> 29</span>          vectorstore.load_index(fake_embeddings, tmp_path / &quot;none&quot;)
+<span class="ln"> 30</span>  
+<span class="ln"> 31</span>  
+<span class="ln"> 32</span>  def test_build_with_no_chunks_raises(fake_embeddings, tmp_path) -&gt; None:
+<span class="ln"> 33</span>      with pytest.raises(ValueError, match=&quot;No chunks&quot;):
+<span class="ln"> 34</span>          vectorstore.build_index([], fake_embeddings, tmp_path / &quot;idx&quot;)</code></pre>
+</div>
+
+<p class="back-to-top"><a href="#s7">↑ Back to S7</a></p>
+<h3 id="s7-7">S7:7 Line-by-Line Deep Dive: Build, Save, Load, Search</h3>
+<ul>
+  <li><strong><code>build_index()</code></strong> refuses an empty chunk list (a missing <code>raw/</code> folder would otherwise build an empty index), embeds through <code>FAISS.from_documents</code>, and saves to the model-specific folder.</li>
+  <li><strong><code>load_index()</code></strong> checks for <code>index.faiss</code> first and says "run <code>python rag.py build</code>" if it's missing.</li>
+  <li><strong><code>allow_dangerous_deserialization=True</code></strong> is required because FAISS saves metadata with pickle. It's safe here only because the file is written by our own build and never downloaded.</li>
+  <li><strong><code>search()</code></strong> embeds the question with the same model and returns the top 4. S9 replaces its body with hybrid search; callers don't change.</li>
+</ul>
+
+<p class="back-to-top"><a href="#s7">↑ Back to S7</a></p>
+<h3 id="s7-8">S7:8 Technical Deep Dive: What Vector Search Finds, and What It Misses</h3>
+<ul>
+  <li><strong>Finds meaning:</strong> "how fast must they tell us about a breach" matches "notify … within forty-eight (48) hours".</li>
+  <li><strong>Misses exact terms:</strong> IDs like <code>CC6.1</code>, <code>MSA-2025-014</code>, or "Section 7.2" carry little meaning to an embedding model. S9 adds BM25 keyword search for these.</li>
+  <li><strong>Exact search at this size:</strong> 56 vectors are searched exhaustively; approximate indexes (HNSW, IVF) only matter at tens of thousands.</li>
+  <li><strong>langchain-community is being sunset.</strong> FAISS is the one part still using it; a standalone integration can replace it later.</li>
+</ul>
+
+<p class="back-to-top"><a href="#s7">↑ Back to S7</a></p>
+<h3 id="s7-sysdesign">S7:9 System Design <a class="h3-up" href="#s7" title="Back to S7">↑ S7</a></h3>
+<p>Talking points for a system-design discussion.</p>
+<ul>
+  <li><strong>Systems design:</strong> the index is a build artifact per use case and per embeddings model, so it can be rebuilt any time from <code>raw/</code></li>
+  <li><strong>Cost:</strong> embedding happens once per build, not per question; questions only embed the question itself</li>
+  <li><strong>Security:</strong> pickle loading is limited to files we wrote; a downloaded index would need a safe format</li>
+</ul>
+<p><strong>Trade-offs:</strong></p>
+<table class="cost-table">
+  <tr><th>Decision</th><th>Pros</th><th>Cons</th><th>Alternative / when to switch</th></tr>
+  <tr><td>FAISS on disk</td><td>No server, fast, free</td><td>Single machine; rebuild to update</td><td>pgvector or a hosted store when many users or live updates are needed</td></tr>
+  <tr><td>Rebuild on every <code>build</code></td><td>Simple, always consistent</td><td>Re-embeds unchanged documents</td><td>Hash files and re-embed only what changed</td></tr>
+  <tr><td>Top 4 chunks</td><td>Short prompts, focused answers</td><td>A cross-document question may need more</td><td>S10 reranking: fetch 10–20, keep the best 4</td></tr>
+</table>
+
+<p class="back-to-top"><a href="#s7">↑ Back to S7</a></p>
+<p class="tags"><strong>Tags:</strong> Vector Store, FAISS, ANN Search, Caching, F3, S7</p>
+
+<p><strong>What was built:</strong></p>
+<ul>
+  <li><code>ingest/vectorstore.py</code> — <code>build_index()</code>, <code>load_index()</code></li>
+  <li><code>retrieval/search.py</code> — <code>search()</code>, <code>TOP_K = 4</code></li>
+  <li><code>ingest/pipeline.py</code> — <code>build_index()</code> glue; <code>rag.py build</code></li>
+  <li><code>tests/test_vectorstore.py</code> — 3 tests; <code>tests/test_pipeline.py</code> — 1 test</li>
+</ul>
+
+</td></tr>
+</table>
 
 <p class="back-to-top"><a href="#top">↑ Back to top</a></p>
 
@@ -1269,34 +1898,159 @@ Jump to:
 
 <p class="f-toc">
 Jump to:
-<a href="#s11-1">S11:1 Context Assembly: TBA</a> ·
-<a href="#s11-2">S11:2 Architecture Summary: TBA</a> ·
-<a href="#s11-3">S11:3 Integration Guide: TBA</a> ·
-<a href="#s11-4">S11:4 Testing Guide: TBA</a> ·
-<a href="#s11-5">S11:5 Source Code Reference: TBA</a> ·
-<a href="#s11-6">S11:6 Source Code Reference: TBA</a> ·
-<a href="#s11-7">S11:7 Line-by-Line Deep Dive: TBA</a> ·
-<a href="#s11-8">S11:8 Technical Deep Dive: TBA</a> ·
-<a href="#s11-sysdesign">S11:9 System Design: TBA</a>
+<a href="#s11-1">S11:1 Context Assembly</a> ·
+<a href="#s11-2">S11:2 Architecture Summary</a> ·
+<a href="#s11-3">S11:3 Integration Guide</a> ·
+<a href="#s11-4">S11:4 Testing Guide</a> ·
+<a href="#s11-5">S11:5 Source Code Reference (retrieval/context.py)</a> ·
+<a href="#s11-6">S11:6 Source Code Reference (tests/test_context.py)</a> ·
+<a href="#s11-7">S11:7 Line-by-Line Deep Dive</a> ·
+<a href="#s11-8">S11:8 Technical Deep Dive</a> ·
+<a href="#s11-sysdesign">S11:9 System Design</a>
 </p>
 
-<h3 id="s11-1">S11:1 Context Assembly: TBA</h3>
+<div class="note">
+<strong>Status: Implemented.</strong> <code>retrieval/context.py</code> turns the retrieved chunks into one numbered context block (<code>[Source 1: stratocore-cloud-msa.pdf, p. 2]</code> followed by the text) and a matching list of sources, so the LLM can cite <code>[Source n]</code> and the reader can find that file and page. It fixes the PDF's Step 11 code, which used <code>{Source}</code> instead of <code>{source}</code> and would crash.</div>
 
-<h3 id="s11-2">S11:2 Architecture Summary: TBA</h3>
+<p>Maps to <code>checklist.csv</code> row S11, "Context Assembly".</p>
 
-<h3 id="s11-3">S11:3 Integration Guide: TBA</h3>
+<table class="blog-box">
+<tr><td>
 
-<h3 id="s11-4">S11:4 Testing Guide: TBA</h3>
+<p class="back-to-top"><a href="#s11">↑ Back to S11</a></p>
+<h3 id="s11-1">S11:1 Context Assembly: Numbered Sources the Answer Can Cite</h3>
+<p>The LLM only knows what's in its prompt. S11 decides how retrieved chunks appear there: each one numbered and
+labeled with its file and page, so an answer like "48 hours [Source 1]" points to a real place in a real document.</p>
+<p class="tags"><strong>Tags:</strong> Context Engineering, Citations, Prompt Construction, S11</p>
 
-<h3 id="s11-5">S11:5 Source Code Reference: TBA</h3>
+<p class="back-to-top"><a href="#s11">↑ Back to S11</a></p>
+<h3 id="s11-2">S11:2 Architecture Summary: Chunks In, Context and Sources Out</h3>
+<pre class="cmd"><code>[chunk, chunk, chunk, chunk]
+        │
+        ├─ assemble_context() ─► &quot;[Source 1: stratocore-cloud-msa.pdf, p. 2]\n&lt;text&gt;\n\n[Source 2: ...]&quot;  ──► S12 prompt
+        └─ sources()          ─► [{n: 1, source: &#x27;msa/stratocore-cloud-msa.pdf&#x27;, page: 2}, ...]   ──► shown with the answer</code></pre>
 
-<h3 id="s11-6">S11:6 Source Code Reference: TBA</h3>
+<p class="back-to-top"><a href="#s11">↑ Back to S11</a></p>
+<h3 id="s11-3">S11:3 Integration Guide: What Actually Got Touched</h3>
+<table class="cost-table">
+  <tr><th>File</th><th>Change</th></tr>
+  <tr><td><code>retrieval/context.py</code></td><td>New: S11</td></tr>
+  <tr><td><code>engines/plain_rag_engine.py</code></td><td>Builds the prompt from <code>assemble_context()</code></td></tr>
+  <tr><td><code>rag.py</code></td><td>Prints the <code>sources()</code> list under each answer</td></tr>
+  <tr><td><code>tests/test_context.py</code></td><td>New: 3 tests</td></tr>
+</table>
 
-<h3 id="s11-7">S11:7 Line-by-Line Deep Dive: TBA</h3>
+<h3 class="hl-title" id="s11-4">S11:4 Testing Guide: How to Verify Context Assembly (S11)</h3>
+<p><strong class="hl-title">1) Run the unit tests</strong> — mocked, no API key or network.</p>
+<pre class="cmd"><code>source venv/bin/activate
+pytest -v tests/test_context.py</code></pre>
+<pre class="cmd"><code>tests/test_context.py::test_assemble_numbers_sources_in_order PASSED
+tests/test_context.py::test_sources_match_the_numbers_in_the_context PASSED
+tests/test_context.py::test_empty_input PASSED
+============================== 3 passed in 0.01s ===============================</code></pre>
 
-<h3 id="s11-8">S11:8 Technical Deep Dive: TBA</h3>
 
-<h3 id="s11-sysdesign">S11:9 System Design: TBA</h3>
+<p class="back-to-top"><a href="#s11">↑ Back to S11</a></p>
+<h3 id="s11-5">S11:5 Source Code Reference: retrieval/context.py — full file</h3>
+<div class="code-block">
+<div class="code-block-title"><span>retrieval/context.py</span><span class="role">assemble_context, sources, source_label (S11) — 20 lines</span></div>
+<pre class="plain-code"><code><span class="ln">  1</span>  # S11: join the top chunks into one context block with [Source n] citations.
+<span class="ln">  2</span>  from pathlib import Path
+<span class="ln">  3</span>  
+<span class="ln">  4</span>  from langchain_core.documents import Document
+<span class="ln">  5</span>  
+<span class="ln">  6</span>  
+<span class="ln">  7</span>  def source_label(doc: Document) -&gt; str:
+<span class="ln">  8</span>      # S11: &quot;stratocore-cloud-msa.pdf, p. 3&quot; is enough for a reader to find the clause
+<span class="ln">  9</span>      name = Path(doc.metadata.get(&quot;source&quot;, &quot;unknown&quot;)).name
+<span class="ln"> 10</span>      page = doc.metadata.get(&quot;page&quot;)
+<span class="ln"> 11</span>      return f&quot;{name}, p. {page}&quot; if page else name
+<span class="ln"> 12</span>  
+<span class="ln"> 13</span>  
+<span class="ln"> 14</span>  def assemble_context(docs: list[Document]) -&gt; str:
+<span class="ln"> 15</span>      # S11: numbered blocks so the LLM can cite [Source n] and the reader can match n to a file
+<span class="ln"> 16</span>      return &quot;\n\n&quot;.join(f&quot;[Source {i}: {source_label(d)}]\n{d.page_content.strip()}&quot; for i, d in enumerate(docs, start=1))
+<span class="ln"> 17</span>  
+<span class="ln"> 18</span>  
+<span class="ln"> 19</span>  def sources(docs: list[Document]) -&gt; list[dict]:
+<span class="ln"> 20</span>      return [{&quot;n&quot;: i, &quot;source&quot;: d.metadata.get(&quot;source&quot;), &quot;page&quot;: d.metadata.get(&quot;page&quot;)} for i, d in enumerate(docs, start=1)]</code></pre>
+</div>
+
+<p class="back-to-top"><a href="#s11">↑ Back to S11</a></p>
+<h3 id="s11-6">S11:6 Source Code Reference: tests/test_context.py — full file</h3>
+<div class="code-block">
+<div class="code-block-title"><span>tests/test_context.py</span><span class="role">3 context tests (S11) — 28 lines</span></div>
+<pre class="plain-code"><code><span class="ln">  1</span>  # S11: context assembly tests.
+<span class="ln">  2</span>  from langchain_core.documents import Document
+<span class="ln">  3</span>  
+<span class="ln">  4</span>  from retrieval import context
+<span class="ln">  5</span>  
+<span class="ln">  6</span>  DOCS = [
+<span class="ln">  7</span>      Document(page_content=&quot;  Notify within 48 hours. &quot;, metadata={&quot;source&quot;: &quot;msa/stratocore-cloud-msa.pdf&quot;, &quot;page&quot;: 3}),
+<span class="ln">  8</span>      Document(page_content=&quot;Mutual NDA.&quot;, metadata={&quot;source&quot;: &quot;nda/x.pdf&quot;}),
+<span class="ln">  9</span>  ]
+<span class="ln"> 10</span>  
+<span class="ln"> 11</span>  
+<span class="ln"> 12</span>  def test_assemble_numbers_sources_in_order() -&gt; None:
+<span class="ln"> 13</span>      assert context.assemble_context(DOCS) == (
+<span class="ln"> 14</span>          &quot;[Source 1: stratocore-cloud-msa.pdf, p. 3]\nNotify within 48 hours.\n\n&quot;
+<span class="ln"> 15</span>          &quot;[Source 2: x.pdf]\nMutual NDA.&quot;
+<span class="ln"> 16</span>      )
+<span class="ln"> 17</span>  
+<span class="ln"> 18</span>  
+<span class="ln"> 19</span>  def test_sources_match_the_numbers_in_the_context() -&gt; None:
+<span class="ln"> 20</span>      assert context.sources(DOCS) == [
+<span class="ln"> 21</span>          {&quot;n&quot;: 1, &quot;source&quot;: &quot;msa/stratocore-cloud-msa.pdf&quot;, &quot;page&quot;: 3},
+<span class="ln"> 22</span>          {&quot;n&quot;: 2, &quot;source&quot;: &quot;nda/x.pdf&quot;, &quot;page&quot;: None},
+<span class="ln"> 23</span>      ]
+<span class="ln"> 24</span>  
+<span class="ln"> 25</span>  
+<span class="ln"> 26</span>  def test_empty_input() -&gt; None:
+<span class="ln"> 27</span>      assert context.assemble_context([]) == &quot;&quot;
+<span class="ln"> 28</span>      assert context.sources([]) == []</code></pre>
+</div>
+
+<p class="back-to-top"><a href="#s11">↑ Back to S11</a></p>
+<h3 id="s11-7">S11:7 Line-by-Line Deep Dive: Three Small Functions</h3>
+<ul>
+  <li><strong><code>source_label()</code></strong> shows only the file name and page (<code>stratocore-cloud-msa.pdf, p. 2</code>), which is enough to find the clause.</li>
+  <li><strong><code>assemble_context()</code></strong> numbers chunks from 1 in retrieval order and strips stray whitespace.</li>
+  <li><strong><code>sources()</code></strong> uses the same numbering, so <code>[Source 2]</code> in the answer always matches item 2 in the list.</li>
+</ul>
+
+<p class="back-to-top"><a href="#s11">↑ Back to S11</a></p>
+<h3 id="s11-8">S11:8 Technical Deep Dive: What It Does, and What It Doesn't</h3>
+<ul>
+  <li><strong>No de-duplication yet:</strong> overlapping chunks from the same page can both appear.</li>
+  <li><strong>No token budget:</strong> 4 chunks of up to 1,000 characters is small, so there's no trimming yet.</li>
+  <li><strong>No titles yet:</strong> labels use file names; S4 metadata will add document titles and agreement numbers.</li>
+</ul>
+
+<p class="back-to-top"><a href="#s11">↑ Back to S11</a></p>
+<h3 id="s11-sysdesign">S11:9 System Design <a class="h3-up" href="#s11" title="Back to S11">↑ S11</a></h3>
+<p>Talking points for a system-design discussion.</p>
+<ul>
+  <li><strong>Trust:</strong> in compliance work an answer without a traceable source isn't usable, so citations are part of the minimum, not an extra</li>
+  <li><strong>Context engineering:</strong> ordering, labeling, and limiting context is where S10 reranking plugs in</li>
+</ul>
+<p><strong>Trade-offs:</strong></p>
+<table class="cost-table">
+  <tr><th>Decision</th><th>Pros</th><th>Cons</th><th>Alternative / when to switch</th></tr>
+  <tr><td>File name + page labels</td><td>Simple and always correct</td><td>Less readable than a title</td><td>Use S4's title and agreement number</td></tr>
+  <tr><td>Retrieval order</td><td>Matches search ranking</td><td>Best chunk may not be first until S10</td><td>S10 reranking sets the order</td></tr>
+</table>
+
+<p class="back-to-top"><a href="#s11">↑ Back to S11</a></p>
+<p class="tags"><strong>Tags:</strong> Context Engineering, Citations, Prompt Construction, S11</p>
+
+<p><strong>What was built:</strong></p>
+<ul>
+  <li><code>retrieval/context.py</code> — <code>assemble_context()</code>, <code>sources()</code>, <code>source_label()</code></li>
+  <li><code>tests/test_context.py</code> — 3 tests</li>
+</ul>
+
+</td></tr>
+</table>
 
 <p class="back-to-top"><a href="#top">↑ Back to top</a></p>
 
@@ -1306,34 +2060,240 @@ Jump to:
 
 <p class="f-toc">
 Jump to:
-<a href="#s12-1">S12:1 LLM Generation: TBA</a> ·
-<a href="#s12-2">S12:2 Architecture Summary: TBA</a> ·
-<a href="#s12-3">S12:3 Integration Guide: TBA</a> ·
-<a href="#s12-4">S12:4 Testing Guide: TBA</a> ·
-<a href="#s12-5">S12:5 Source Code Reference: TBA</a> ·
-<a href="#s12-6">S12:6 Source Code Reference: TBA</a> ·
-<a href="#s12-7">S12:7 Line-by-Line Deep Dive: TBA</a> ·
-<a href="#s12-8">S12:8 Technical Deep Dive: TBA</a> ·
-<a href="#s12-sysdesign">S12:9 System Design: TBA</a>
+<a href="#s12-1">S12:1 LLM Generation</a> ·
+<a href="#s12-2">S12:2 Architecture Summary</a> ·
+<a href="#s12-3">S12:3 Integration Guide</a> ·
+<a href="#s12-4">S12:4 Testing Guide</a> ·
+<a href="#s12-5">S12:5 Source Code Reference (engines/plain_rag_engine.py)</a> ·
+<a href="#s12-6">S12:6 Source Code Reference (tests/test_plain_rag_engine.py)</a> ·
+<a href="#s12-7">S12:7 Line-by-Line Deep Dive</a> ·
+<a href="#s12-8">S12:8 Technical Deep Dive</a> ·
+<a href="#s12-sysdesign">S12:9 System Design</a>
 </p>
 
-<h3 id="s12-1">S12:1 LLM Generation: TBA</h3>
+<div class="note">
+<strong>Status: Implemented.</strong> <code>engines/plain_rag_engine.py</code> answers a question: search (S7) → context (S11) → <code>gpt-4o-mini</code> with a prompt that allows only the given context, requires <code>[Source n]</code> citations, gives an exact refusal when the answer isn't there, and ends with "Not legal advice." <code>engines/base.py</code> adds restaurant-ai-platform's <strong>F12</strong> engine factory, so S17's agent becomes a second engine. <code>rag.py ask</code> and <code>rag.py chat</code> use it. Basic version: the answer-side redaction check arrives with S5.</div>
 
-<h3 id="s12-2">S12:2 Architecture Summary: TBA</h3>
+<p>Maps to <code>checklist.csv</code> row S12, "LLM Generation".</p>
 
-<h3 id="s12-3">S12:3 Integration Guide: TBA</h3>
+<table class="blog-box">
+<tr><td>
 
-<h3 id="s12-4">S12:4 Testing Guide: TBA</h3>
+<p class="back-to-top"><a href="#s12">↑ Back to S12</a></p>
+<h3 id="s12-1">S12:1 LLM Generation: Grounded, Cited Answers From the Terminal</h3>
+<p>S12 is the step that turns retrieval into an answer. It's also the first step where you can ask the system a
+question yourself:</p><pre class="cmd"><code>python rag.py ask &quot;What&#x27;s the breach notification window in the Stratocore MSA?&quot;</code></pre>
+<h4>The Prompt Rules</h4>
+<ul>
+  <li>Answer using <strong>only</strong> the context; no outside knowledge.</li>
+  <li>Cite every fact as <code>[Source n]</code>.</li>
+  <li>If the context doesn't have it, reply exactly: <em>"I cannot find the answer in the provided documents."</em></li>
+  <li>End with <em>"Not legal advice."</em></li>
+</ul>
+<h4>What's Imported (and Why)</h4>
+<ul>
+  <li><code>ChatPromptTemplate</code> (lazy): system + human messages with <code>{context}</code> and <code>{question}</code> slots.</li>
+  <li><code>retrieval.search</code>, <code>retrieval.context</code>: S7 and S11.</li>
+  <li><code>engines.base</code>: the <code>Answer</code> result and the <code>BaseEngine</code> interface.</li>
+</ul>
+<p class="tags"><strong>Tags:</strong> Grounded Generation, Citations, Hallucination Control, Engine Factory, F12, S12</p>
 
-<h3 id="s12-5">S12:5 Source Code Reference: TBA</h3>
+<p class="back-to-top"><a href="#s12">↑ Back to S12</a></p>
+<h3 id="s12-2">S12:2 Architecture Summary: One Engine, Three Ways In</h3>
+<pre class="cmd"><code>rag.py ask &quot;...&quot;  ─┐
+rag.py chat        ─┼──►  get_engine(&#x27;plain_rag&#x27;)  ──►  PlainRagEngine.answer(question)
+engine_api /ask    ─┘        (S16, later)                │
+                                                          ├─ search(index, q, k=4)        S7
+                                                          ├─ assemble_context(docs)       S11
+                                                          └─ prompt | gpt-4o-mini         S12
+                                                                 ▼
+                                              Answer(answer, sources, engine)</code></pre>
 
-<h3 id="s12-6">S12:6 Source Code Reference: TBA</h3>
+<p class="back-to-top"><a href="#s12">↑ Back to S12</a></p>
+<h3 id="s12-3">S12:3 Integration Guide: What Actually Got Touched</h3>
+<table class="cost-table">
+  <tr><th>File</th><th>Change</th></tr>
+  <tr><td><code>engines/plain_rag_engine.py</code></td><td>New: S12</td></tr>
+  <tr><td><code>engines/base.py</code></td><td>New: <code>Answer</code>, <code>BaseEngine</code>, <code>get_engine()</code> (F12)</td></tr>
+  <tr><td><code>rag.py</code></td><td>New: <code>build</code>, <code>ask</code>, <code>chat</code> (<code>serve</code> and <code>eval</code> say which step adds them)</td></tr>
+  <tr><td><code>tests/test_plain_rag_engine.py</code></td><td>New: 3 tests</td></tr>
+</table>
 
-<h3 id="s12-7">S12:7 Line-by-Line Deep Dive: TBA</h3>
+<h3 class="hl-title" id="s12-4">S12:4 Testing Guide: How to Verify LLM Generation (S12)</h3>
+<p><strong class="hl-title">1) Run the unit tests</strong> — mocked, no API key or network.</p>
+<pre class="cmd"><code>source venv/bin/activate
+pytest -v tests/test_plain_rag_engine.py</code></pre>
+<pre class="cmd"><code>tests/test_plain_rag_engine.py::test_answer_grounds_prompt_in_numbered_context_and_returns_sources PASSED
+tests/test_plain_rag_engine.py::test_no_retrieved_docs_skips_llm_and_refuses PASSED
+tests/test_plain_rag_engine.py::test_get_engine_rejects_unknown_name PASSED
+============================== 3 passed in 0.06s ===============================</code></pre>
+<p><strong class="hl-title">2) Ask real questions</strong> — needs your key and a built index (<code>python rag.py build</code>).</p><pre class="cmd"><code>python rag.py ask &quot;What&#x27;s the breach notification window in the Stratocore MSA?&quot;
+python rag.py ask &quot;Does Cortexa&#x27;s contract allow training on our data?&quot;
+python rag.py ask &quot;Does OpsVault have ISO 27001?&quot;
+python rag.py chat</code></pre><p>Expected, from the S1 answer key: Stratocore's window is <strong>48 hours</strong> (MSA §8.1); Cortexa's §5.3 forbids training on prompts and outputs, but §5.4 allows de-identified usage data; and OpsVault does <strong>not</strong> hold ISO 27001 (POL-GRC-002 §5). Each answer should list its sources and end with "Not legal advice."</p>
 
-<h3 id="s12-8">S12:8 Technical Deep Dive: TBA</h3>
+<p class="back-to-top"><a href="#s12">↑ Back to S12</a></p>
+<h3 id="s12-5">S12:5 Source Code Reference: engines/plain_rag_engine.py — full file</h3>
+<div class="code-block">
+<div class="code-block-title"><span>engines/plain_rag_engine.py</span><span class="role">PlainRagEngine.answer, prompt (S12) — 50 lines</span></div>
+<pre class="plain-code"><code><span class="ln">  1</span>  # S12: plain RAG engine: retrieve -&gt; assemble context -&gt; grounded, cited answer.
+<span class="ln">  2</span>  from engines.base import Answer, BaseEngine
+<span class="ln">  3</span>  from retrieval import context as ctx
+<span class="ln">  4</span>  from retrieval.search import TOP_K, search
+<span class="ln">  5</span>  
+<span class="ln">  6</span>  NOT_FOUND = &quot;I cannot find the answer in the provided documents.&quot;
+<span class="ln">  7</span>  DISCLAIMER = &quot;Not legal advice.&quot;
+<span class="ln">  8</span>  
+<span class="ln">  9</span>  # S12: the PDF&#x27;s prompt plus three fixes: an exact refusal string, mandatory [Source n] citations,
+<span class="ln"> 10</span>  # and the &quot;Not legal advice&quot; disclaimer the use case requires on every answer
+<span class="ln"> 11</span>  SYSTEM_PROMPT = (
+<span class="ln"> 12</span>      &quot;You are OpsVault&#x27;s vendor risk and compliance assistant. Answer the question using ONLY the &quot;
+<span class="ln"> 13</span>      &quot;context below. Cite every fact with its source number, like [Source 1]. If the context does not &quot;
+<span class="ln"> 14</span>      f&quot;contain the answer, reply exactly: \&quot;{NOT_FOUND}\&quot; Do not use outside knowledge. &quot;
+<span class="ln"> 15</span>      f&quot;End every answer with: \&quot;{DISCLAIMER}\&quot;&quot;
+<span class="ln"> 16</span>  )
+<span class="ln"> 17</span>  
+<span class="ln"> 18</span>  
+<span class="ln"> 19</span>  class PlainRagEngine(BaseEngine):
+<span class="ln"> 20</span>      name = &quot;plain_rag&quot;
+<span class="ln"> 21</span>  
+<span class="ln"> 22</span>      def __init__(self, index, llm, k: int = TOP_K) -&gt; None:
+<span class="ln"> 23</span>          self.index = index
+<span class="ln"> 24</span>          self.llm = llm
+<span class="ln"> 25</span>          self.k = k
+<span class="ln"> 26</span>  
+<span class="ln"> 27</span>      @classmethod
+<span class="ln"> 28</span>      def from_config(cls, case: str | None = None, k: int = TOP_K) -&gt; &quot;PlainRagEngine&quot;:
+<span class="ln"> 29</span>          from core import config
+<span class="ln"> 30</span>          from core.llm import build_embeddings, build_llm
+<span class="ln"> 31</span>          from ingest.vectorstore import load_index
+<span class="ln"> 32</span>  
+<span class="ln"> 33</span>          # F3: load the cached index instead of re-embedding the corpus on every question
+<span class="ln"> 34</span>          index = load_index(build_embeddings(), config.index_dir(case))
+<span class="ln"> 35</span>          return cls(index, build_llm(), k)
+<span class="ln"> 36</span>  
+<span class="ln"> 37</span>      def answer(self, question: str) -&gt; Answer:
+<span class="ln"> 38</span>          from langchain_core.prompts import ChatPromptTemplate
+<span class="ln"> 39</span>  
+<span class="ln"> 40</span>          docs = search(self.index, question, self.k)  # S7
+<span class="ln"> 41</span>          if not docs:
+<span class="ln"> 42</span>              # S12: nothing retrieved means nothing to ground on, so skip the LLM call entirely
+<span class="ln"> 43</span>              return Answer(question, f&quot;{NOT_FOUND} {DISCLAIMER}&quot;, [], self.name)
+<span class="ln"> 44</span>          prompt = ChatPromptTemplate.from_messages([
+<span class="ln"> 45</span>              (&quot;system&quot;, SYSTEM_PROMPT),
+<span class="ln"> 46</span>              (&quot;human&quot;, &quot;Context:\n{context}\n\nQuestion: {question}&quot;),
+<span class="ln"> 47</span>          ])
+<span class="ln"> 48</span>          reply = (prompt | self.llm).invoke({&quot;context&quot;: ctx.assemble_context(docs), &quot;question&quot;: question})  # S11
+<span class="ln"> 49</span>          text = getattr(reply, &quot;content&quot;, str(reply)).strip()
+<span class="ln"> 50</span>          return Answer(question, text, ctx.sources(docs), self.name)</code></pre>
+</div>
 
-<h3 id="s12-sysdesign">S12:9 System Design: TBA</h3>
+<p class="back-to-top"><a href="#s12">↑ Back to S12</a></p>
+<h3 id="s12-6">S12:6 Source Code Reference: tests/test_plain_rag_engine.py — full file</h3>
+<div class="code-block">
+<div class="code-block-title"><span>tests/test_plain_rag_engine.py</span><span class="role">3 engine tests (S12) — 52 lines</span></div>
+<pre class="plain-code"><code><span class="ln">  1</span>  # S12: plain RAG engine tests with a fake index and a fake LLM that records its input.
+<span class="ln">  2</span>  import pytest
+<span class="ln">  3</span>  from langchain_core.documents import Document
+<span class="ln">  4</span>  from langchain_core.messages import AIMessage
+<span class="ln">  5</span>  from langchain_core.runnables import RunnableLambda
+<span class="ln">  6</span>  
+<span class="ln">  7</span>  from engines import base
+<span class="ln">  8</span>  from engines.plain_rag_engine import DISCLAIMER, NOT_FOUND, PlainRagEngine
+<span class="ln">  9</span>  
+<span class="ln"> 10</span>  
+<span class="ln"> 11</span>  class FakeIndex:
+<span class="ln"> 12</span>      def __init__(self, docs):
+<span class="ln"> 13</span>          self.docs = docs
+<span class="ln"> 14</span>  
+<span class="ln"> 15</span>      def similarity_search(self, question, k):
+<span class="ln"> 16</span>          return self.docs[:k]
+<span class="ln"> 17</span>  
+<span class="ln"> 18</span>  
+<span class="ln"> 19</span>  def recording_llm(reply: str, seen: list):
+<span class="ln"> 20</span>      def _call(prompt_value):
+<span class="ln"> 21</span>          seen.append(prompt_value.to_messages())
+<span class="ln"> 22</span>          return AIMessage(content=reply)
+<span class="ln"> 23</span>  
+<span class="ln"> 24</span>      return RunnableLambda(_call)
+<span class="ln"> 25</span>  
+<span class="ln"> 26</span>  
+<span class="ln"> 27</span>  def test_answer_grounds_prompt_in_numbered_context_and_returns_sources() -&gt; None:
+<span class="ln"> 28</span>      docs = [Document(page_content=&quot;Notify within 48 hours.&quot;, metadata={&quot;source&quot;: &quot;msa/s.pdf&quot;, &quot;page&quot;: 3})]
+<span class="ln"> 29</span>      seen = []
+<span class="ln"> 30</span>      engine = PlainRagEngine(FakeIndex(docs), recording_llm(f&quot;48 hours [Source 1]. {DISCLAIMER}&quot;, seen))
+<span class="ln"> 31</span>  
+<span class="ln"> 32</span>      result = engine.answer(&quot;What is the breach notice window?&quot;)
+<span class="ln"> 33</span>  
+<span class="ln"> 34</span>      system, human = seen[0]
+<span class="ln"> 35</span>      assert NOT_FOUND in system.content and DISCLAIMER in system.content
+<span class="ln"> 36</span>      assert &quot;[Source 1: s.pdf, p. 3]\nNotify within 48 hours.&quot; in human.content
+<span class="ln"> 37</span>      assert &quot;What is the breach notice window?&quot; in human.content
+<span class="ln"> 38</span>      assert result.answer == f&quot;48 hours [Source 1]. {DISCLAIMER}&quot;
+<span class="ln"> 39</span>      assert result.sources == [{&quot;n&quot;: 1, &quot;source&quot;: &quot;msa/s.pdf&quot;, &quot;page&quot;: 3}]
+<span class="ln"> 40</span>      assert result.engine == &quot;plain_rag&quot;
+<span class="ln"> 41</span>  
+<span class="ln"> 42</span>  
+<span class="ln"> 43</span>  def test_no_retrieved_docs_skips_llm_and_refuses() -&gt; None:
+<span class="ln"> 44</span>      seen = []
+<span class="ln"> 45</span>      result = PlainRagEngine(FakeIndex([]), recording_llm(&quot;should not be called&quot;, seen)).answer(&quot;anything&quot;)
+<span class="ln"> 46</span>      assert seen == []
+<span class="ln"> 47</span>      assert result.answer == f&quot;{NOT_FOUND} {DISCLAIMER}&quot;
+<span class="ln"> 48</span>  
+<span class="ln"> 49</span>  
+<span class="ln"> 50</span>  def test_get_engine_rejects_unknown_name() -&gt; None:
+<span class="ln"> 51</span>      with pytest.raises(ValueError, match=&quot;plain_rag&quot;):
+<span class="ln"> 52</span>          base.get_engine(&quot;nope&quot;)</code></pre>
+</div>
+
+<p class="back-to-top"><a href="#s12">↑ Back to S12</a></p>
+<h3 id="s12-7">S12:7 Line-by-Line Deep Dive: Inside answer()</h3>
+<ul>
+  <li><strong><code>from_config()</code></strong> loads the saved index (F3) and the chat model once, so <code>chat</code> doesn't reload per question.</li>
+  <li><strong>No documents, no LLM call.</strong> If search returns nothing, the engine returns the refusal directly, so nothing gets answered from the model's memory.</li>
+  <li><strong><code>prompt | self.llm</code></strong> builds the system and human messages and calls the model; <code>.content</code> is the answer text.</li>
+  <li><strong><code>Answer</code></strong> holds the question, answer, sources, and engine name: everything the terminal, API, or UI needs.</li>
+  <li><strong><code>get_engine()</code></strong> is the F12 switch: <code>plain_rag</code> now, <code>langgraph</code> with S17.</li>
+</ul>
+
+<p class="back-to-top"><a href="#s12">↑ Back to S12</a></p>
+<h3 id="s12-8">S12:8 Technical Deep Dive: What Grounding Prevents, and What It Doesn't</h3>
+<ul>
+  <li><strong>Prevents:</strong> answers with no source, and answers from general knowledge when the documents are silent (the ISO 27001 question tests this).</li>
+  <li><strong>Doesn't guarantee:</strong> the model can still misread a chunk or cite the wrong number. S13 evals measure faithfulness.</li>
+  <li><strong>Only as good as retrieval:</strong> if search misses the right chunk, the honest answer is the refusal. S8–S10 improve what gets retrieved.</li>
+  <li><strong>No redaction yet:</strong> the fake PII in the documents can appear in answers until S5.</li>
+</ul>
+
+<p class="back-to-top"><a href="#s12">↑ Back to S12</a></p>
+<h3 id="s12-sysdesign">S12:9 System Design <a class="h3-up" href="#s12" title="Back to S12">↑ S12</a></h3>
+<p>Talking points for a system-design discussion.</p>
+<ul>
+  <li><strong>Hallucination control:</strong> an exact refusal string makes "I don't know" testable and countable in evals</li>
+  <li><strong>Agents:</strong> the engine interface means S17's LangGraph agent plugs in beside this one, behind the same <code>ask</code> and API</li>
+  <li><strong>Evals:</strong> temperature 0 plus a fixed index means the same question gives the same answer, so regressions are visible</li>
+</ul>
+<p><strong>Trade-offs:</strong></p>
+<table class="cost-table">
+  <tr><th>Decision</th><th>Pros</th><th>Cons</th><th>Alternative / when to switch</th></tr>
+  <tr><td>gpt-4o-mini, temperature 0</td><td>Cheap, fast, repeatable</td><td>Weaker reasoning on long cross-document questions</td><td>Larger model for S17's multi-step reviews</td></tr>
+  <tr><td>Refusal skips the LLM when nothing is retrieved</td><td>No ungrounded answers, no cost</td><td>Can't say "close, but not quite"</td><td>Keep; S10 reduces empty results</td></tr>
+  <tr><td>Disclaimer in the prompt</td><td>Every answer carries it</td><td>Model could drop it</td><td>Append it in code if evals show it missing</td></tr>
+</table>
+
+<p class="back-to-top"><a href="#s12">↑ Back to S12</a></p>
+<p class="tags"><strong>Tags:</strong> Grounded Generation, Citations, Hallucination Control, Engine Factory, F12, S12</p>
+
+<p><strong>What was built:</strong></p>
+<ul>
+  <li><code>engines/plain_rag_engine.py</code> — <code>PlainRagEngine</code>, <code>SYSTEM_PROMPT</code>, <code>NOT_FOUND</code>, <code>DISCLAIMER</code></li>
+  <li><code>engines/base.py</code> — <code>Answer</code>, <code>BaseEngine</code>, <code>get_engine()</code> (F12)</li>
+  <li><code>rag.py</code> — <code>build</code>, <code>ask</code>, <code>chat</code></li>
+  <li><code>tests/test_plain_rag_engine.py</code> — 3 tests; full suite 26 passed</li>
+</ul>
+
+</td></tr>
+</table>
 
 <p class="back-to-top"><a href="#top">↑ Back to top</a></p>
 

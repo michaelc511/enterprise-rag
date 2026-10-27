@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vendor Risk at OpsVault: Why a Workflow Platform Needs Enterprise RAG</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    max-width: 860px;
+    margin: 40px auto;
+    padding: 0 20px;
+    line-height: 1.55;
+    color: #1a1a1a;
+    background: #fff;
+  }
+  h1 { border-bottom: 2px solid #333; padding-bottom: 8px; }
+  h2 {
+    margin-top: 48px;
+    font-size: 2.1em;
+    text-decoration: underline;
+    display: inline-block;
+    background: #dcf5dc;
+    border: 1px solid #4caf50;
+    border-radius: 4px;
+    padding: 6px 16px;
+  }
+  h3 { margin-top: 28px; text-decoration: underline; font-size: 1.3em; }
+  code {
+    background: #f2f2f2;
+    padding: 2px 5px;
+    border-radius: 4px;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 0.92em;
+  }
+  pre {
+    background: #1e1e1e;
+    color: #e6e6e6;
+    padding: 14px 16px;
+    border-radius: 6px;
+    overflow-x: auto;
+  }
+  pre code { background: none; color: inherit; padding: 0; }
+  ul { margin: 8px 0; }
+  li { margin: 4px 0; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0 20px; font-size: 0.93em; }
+  th, td { border: 1px solid #ddd; padding: 6px 10px; text-align: left; vertical-align: top; }
+  th { background: #f7f7f9; }
+  .sd-intro {
+    font-size: 1.02em;
+    color: #333;
+    border-left: 3px solid #4caf50;
+    padding-left: 12px;
+  }
+  .note {
+    background: #fff8e1;
+    border-left: 4px solid #f5c518;
+    padding: 10px 14px;
+    margin: 16px 0;
+  }
+  .phase-row td { background: #1a1a1a; color: #fff; font-weight: 700; }
+  .gap { color: #b42318; font-weight: 600; }
+  .ok { color: #1a7f37; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<h1>Vendor Risk at OpsVault: Why a Workflow Platform Needs Enterprise RAG</h1>
+
+<div class="note">
+  <strong>Category:</strong> Introduction (post 0).<br>
+  <strong>Steps covered:</strong> a business-level overview of all 21 steps. S1–S15 come from the
+  15-step reference pipeline; S16–S21 are serving, agentic and hardening steps I added.<br>
+  <strong>Status today:</strong> S1 (Data Sources) is done. S2–S16 are not started, S17 is planned,
+  and S18–S21 are deferred. This post describes what the pipeline is for and how each step will work.
+  The later posts explain each step as it gets built.<br>
+  <strong>Disclaimer:</strong> OpsVault and every vendor, contract and audit report quoted here are
+  fictional and synthetic. Not legal advice.
+</div>
+
+<p class="sd-intro">
+  Every SaaS company that holds customer data has the same two problems. It must prove that its
+  vendors are safe, and it must prove to its customers that <em>it</em> is safe. Both jobs come down
+  to reading contracts, audit reports and policies carefully, and that reading is still mostly done
+  by hand. This series builds a retrieval-augmented generation (RAG) system that does that reading
+  with citations, PII redaction and evals. The fictional company is OpsVault, an enterprise workflow
+  platform.
+</p>
+
+<!-- ============================================================ -->
+<h2>1. Meet OpsVault</h2>
+
+<p>
+  OpsVault is a fictional cloud SaaS and PaaS company modeled on enterprise workflow platforms. One platform
+  runs a company's IT, HR, customer service, risk, finance and supply-chain workflows, with AI agents
+  built into every product. Customers either buy ready-made products (SaaS) or build their own apps on
+  the OpsVault Platform (PaaS).
+</p>
+
+<table>
+  <tr><th>Product line</th><th>What it does</th></tr>
+  <tr><td>OpsVault Platform</td><td>Low-code platform, workflow engine, database and APIs, including a Table API</td></tr>
+  <tr><td>OpsVault AI</td><td>Generative AI assistants and agents built into every product</td></tr>
+  <tr><td>IT Service / IT Operations / Security Ops</td><td>Incidents, changes, asset inventory (CMDB), AIOps, vulnerability response</td></tr>
+  <tr><td><strong>Risk &amp; Compliance</strong></td><td>Policies, audits and <strong>vendor risk</strong>. This is where the RAG system lives.</td></tr>
+  <tr><td><strong>Supply Chain</strong></td><td>Supplier onboarding, purchase orders, source-to-pay. This is its second home.</td></tr>
+  <tr><td>HR, Customer Service, Finance Ops, CRM, ERP Connect, App Builder</td><td>The rest of the enterprise workflow suite</td></tr>
+</table>
+
+<p>
+  OpsVault is held to <strong>SOC 2 Type II</strong> (control IDs like <code>CC6.1</code>,
+  <code>CC7.2</code>, <code>CC8.1</code>), to <strong>SOX</strong> for finance-related vendors, and to
+  <strong>PCI DSS</strong> wherever card data appears. It relies on a few critical vendors.
+  <strong>Stratocore</strong> is the cloud host that runs the platform. <strong>Cortexa</strong> is
+  the AI model provider that powers OpsVault AI. <strong>Harborline</strong> is a logistics partner.
+</p>
+
+<p>
+  <strong>Customer Zero.</strong> OpsVault runs every product on itself first and then sells what
+  worked. This RAG system follows the same path. OpsVault's own procurement, security, GRC, legal and
+  sales teams use it first. Then it ships to customers as an OpsVault AI skill inside Risk &amp;
+  Compliance.
+</p>
+
+<!-- ============================================================ -->
+<h2>2. The pain: two directions, one pile of documents</h2>
+
+<h3>Inbound: "Is this vendor safe?"</h3>
+<p>
+  OpsVault's vendor policy defines eight requirements, VM-1 to VM-8. Every critical vendor must meet
+  them before signing and for the whole contract. GRC (governance, risk and compliance) checks each
+  contract and SOC 2 report against those requirements and records every gap as a risk. Today that
+  means an analyst opens three documents side by side and hunts for the right clause.
+</p>
+
+<h3>Outbound: "Prove that we're safe."</h3>
+<p>
+  Customers send security questionnaires before they buy. The synthetic one from
+  <strong>Brightwater</strong> asks things like <em>"How often are encryption keys rotated?"</em> and
+  <em>"Is our data used to train or improve any AI model, by you or by any subprocessor?"</em> Sales
+  can't close until security answers, and every answer has to match OpsVault's own policy and SOC 2
+  report exactly.
+</p>
+
+<h3>Why this is hard, and why plain chat with an LLM won't do</h3>
+<table>
+  <tr><th>Pain point</th><th>What goes wrong today</th></tr>
+  <tr><td><strong>Precision</strong></td><td>The answer is one clause, such as "Section 12.2" or "$1,680,000". A close-enough paraphrase is wrong.</td></tr>
+  <tr><td><strong>Cross-document reasoning</strong></td><td>The real question spans the contract, the vendor's audit report and OpsVault's policy. An SOW can quietly override its MSA.</td></tr>
+  <tr><td><strong>Fine print</strong></td><td>"No training on your data" in one section, then "notwithstanding Section 5.3…" in the next.</td></tr>
+  <tr><td><strong>Sensitive content</strong></td><td>Contracts carry signatory names, emails, phone numbers, bank details, even live API keys. None of that may reach an index or an LLM.</td></tr>
+  <tr><td><strong>Trust and audit</strong></td><td>Auditors and legal need to see <em>where</em> an answer came from and who asked what.</td></tr>
+  <tr><td><strong>AI vendor risk</strong></td><td>AI providers are new critical vendors, and their training and retention terms are the newest kind of risk.</td></tr>
+  <tr><td><strong>Speed</strong></td><td>Vendor onboarding and sales deals both stall waiting on reviews.</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2>3. What a review actually finds</h2>
+
+<p>
+  Here is the kind of review the system is built to do, run by hand against the synthetic source
+  documents. Each line quotes or paraphrases the real text.
+</p>
+
+<h3>Cortexa (AI model provider) against OpsVault's vendor policy</h3>
+<table>
+  <tr><th>Policy requirement</th><th>What Cortexa's MSA / SOC 2 says</th><th>Result</th></tr>
+  <tr><td>VM-1: SOC 2 <strong>Type II</strong> report. Type I is "not sufficient."</td><td>Cortexa provides a SOC 2 <strong>Type I</strong> report</td><td class="gap">Gap</td></tr>
+  <tr><td>VM-2: AES-256, keys rotated at least every 12 months</td><td>AES-256 (CX-ENC-01), but keys are rotated <strong>every 24 months</strong> (CX-ENC-02)</td><td class="gap">Gap</td></tr>
+  <tr><td>VM-3: TLS 1.2 or higher</td><td>MSA §6.1: TLS 1.2 or higher</td><td class="ok">Meets</td></tr>
+  <tr><td>VM-4: notify within 48 hours of discovery</td><td>MSA §7: within <strong>72 hours</strong> after confirming</td><td class="gap">Gap</td></tr>
+  <tr><td>VM-5: no AI training, <em>including aggregated, anonymized or de-identified</em> data</td><td>MSA §5.3 bans training on prompts and outputs, but §5.4 lets Cortexa use "aggregated and de-identified" usage data to "improve … Cortexa's models"</td><td class="gap">Gap</td></tr>
+  <tr><td>VM-7: data-breach super cap of at least 2× annual fees</td><td>MSA §10.1: 12 months of fees, with no super cap</td><td class="gap">Gap</td></tr>
+  <tr><td>VM-8: right to audit at least once a year</td><td>MSA §8: audit rights are limited to reviewing Cortexa's SOC 2 report</td><td class="gap">Likely gap (legal to confirm)</td></tr>
+</table>
+
+<h3>Stratocore (cloud host): the cross-document showcase</h3>
+<p><em>"The cloud vendor's MSA requires encryption at rest. Does their SOC 2 report confirm it, and does
+that meet OpsVault's policy?"</em></p>
+<ul>
+  <li><strong>Contract:</strong> MSA §7.2 requires AES-256 and key rotation at least once every 12 months.</li>
+  <li><strong>Audit report:</strong> SC-ENC-01 (AES-256) shows no exceptions. SC-ENC-02 (key rotation)
+    has an <strong>exception noted</strong>: 2 of 25 sampled keys (8%) were last rotated 14 and 16
+    months before testing.</li>
+  <li><strong>Policy:</strong> VM-2 requires rotation to be <em>evidenced</em> in the SOC 2 Type II
+    report. So encryption at rest meets the policy, but key rotation is a finding to log in the risk
+    register.</li>
+  <li><strong>Hidden override:</strong> SOW-02 (Backup &amp; DR) overrides MSA §10.1 <em>for backup
+    copies only</em>. Backups are deleted at the end of a 35-day retention period, not within 30 days
+    after export. A clause search inside the MSA alone would miss this.</li>
+</ul>
+
+<h3>And the content that must never leave</h3>
+<p>The same SOW contains a live integration key and named people. After the S5 redaction step, the
+index stores only typed placeholders:</p>
+<pre><code>During setup, the integration will use the temporary API key [API_KEY_1] issued by OpsVault.
+Stratocore must replace this key with a vaulted credential before go-live ...
+
+- OpsVault service owner: [PERSON_1], [EMAIL_1], [PHONE_1]
+- Stratocore DR lead: [PERSON_3], [EMAIL_3], [PHONE_3]</code></pre>
+<p>Company names (Stratocore, OpsVault) and contract terms are kept on purpose, so questions like
+"the cloud vendor's MSA" still work. The rule is: redact people and secrets, not companies.</p>
+
+<!-- ============================================================ -->
+<h2>4. Pain point → pipeline step</h2>
+
+<p>Each step exists because of a specific failure in the reviews above. Later posts explain each step
+in depth; here is why each one is in the pipeline.</p>
+
+<table>
+  <tr><th>Step</th><th>Name</th><th>Pain it solves at OpsVault</th></tr>
+
+  <tr class="phase-row"><td colspan="3">Phase 1: Ingestion &amp; Indexing (offline)</td></tr>
+  <tr><td>S1</td><td>Data Sources</td><td>Decide what counts as evidence: 11 linked docs (MSAs, SOWs, NDAs, SOC 2 reports, policies, a questionnaire). <strong>Done.</strong></td></tr>
+  <tr><td>S2</td><td>Document Loading</td><td>Turn PDFs into clean text, so tables of control IDs and clause numbers survive.</td></tr>
+  <tr><td>S3, S14</td><td>Chunking (clause-aware)</td><td>Never split "§12.2 Data breach super cap" from its dollar figure.</td></tr>
+  <tr><td>S4</td><td>Metadata Extraction</td><td>Tag doc type, vendor, parties, dates and framework, so "Stratocore's SOWs" filters correctly and SOWs link to MSA-2025-014.</td></tr>
+  <tr><td>S5</td><td>Security &amp; PII Sanitization</td><td>Presidio plus regex replace names, emails, bank numbers and keys with <code>[PERSON_1]</code>-style placeholders <em>before</em> embedding. A redaction log records the entity type and count, never the original value.</td></tr>
+  <tr><td>S6</td><td>Embeddings</td><td>One switchable provider (OpenAI or Azure), reused later by query rewriting, generation and evals.</td></tr>
+  <tr><td>S7</td><td>Vector Database</td><td>A cached FAISS index per use case, so docs aren't re-embedded on every run.</td></tr>
+
+  <tr class="phase-row"><td colspan="3">Phase 2: Pre-retrieval</td></tr>
+  <tr><td>S8</td><td>Query Rewriting (+ query redaction)</td><td>Turn "does the cloud guy rotate keys?" into a precise search, and strip any PII the user pasted in.</td></tr>
+
+  <tr class="phase-row"><td colspan="3">Phase 3: Retrieval</td></tr>
+  <tr><td>S9</td><td>Hybrid Search (BM25 + vector)</td><td>Vectors miss exact tokens. BM25 catches "CC6.1", "SC-ENC-02", "Section 12.2" and "$1,680,000".</td></tr>
+
+  <tr class="phase-row"><td colspan="3">Phase 4: Post-retrieval</td></tr>
+  <tr><td>S10</td><td>Reranking</td><td>A cross-encoder puts the exact clause first, ahead of chunks that only look similar.</td></tr>
+  <tr><td>S11</td><td>Context Assembly</td><td>Label each chunk <code>[Source n]</code> with its doc and section, so every claim can be traced.</td></tr>
+
+  <tr class="phase-row"><td colspan="3">Phase 5: Generation</td></tr>
+  <tr><td>S12</td><td>LLM Generation (+ answer redaction)</td><td>Grounded answers with citations, and "I don't know" when the docs are silent. The final answer is checked for PII once more and carries a "not legal advice" line.</td></tr>
+
+  <tr class="phase-row"><td colspan="3">Phase 6: Evaluation &amp; Observability</td></tr>
+  <tr><td>S13</td><td>Evaluation</td><td>Answer-key checks and an LLM judge for faithfulness. Would the system have caught the Cortexa §5.4 loophole?</td></tr>
+  <tr><td>S15</td><td>Advanced Eval &amp; Observability</td><td>LangSmith tracing, token and cost tracking, and a SQLite usage log. That gives auditors a record of who asked what and what it cost.</td></tr>
+
+  <tr class="phase-row"><td colspan="3">Phase 7: Serving</td></tr>
+  <tr><td>S16</td><td>Web Interfaces</td><td>A FastAPI <code>/ask</code> endpoint plus Gradio and Streamlit demos, so procurement and sales can use it without a terminal.</td></tr>
+
+  <tr class="phase-row"><td colspan="3">Phase 8: Agentic RAG &amp; Production Hardening</td></tr>
+  <tr><td>S17</td><td>Agentic RAG (LangGraph)</td><td>A multi-step vendor review with tools: <code>search_contracts</code>, <code>search_audit_reports</code>, <code>check_policy</code> and <code>create_risk_ticket</code> (through a mock Table API). A human approves before any ticket is filed.</td></tr>
+  <tr><td>S18</td><td>Prompt-Injection Defense</td><td>Vendor documents are written by the vendor, so they're treated as untrusted data, not instructions.</td></tr>
+  <tr><td>S19</td><td>Guardrails</td><td>Off-topic and "not legal advice" checks.</td></tr>
+  <tr><td>S20</td><td>CI Eval Gate</td><td>Tests and evals run on every push, so a prompt change can't silently break answer quality.</td></tr>
+  <tr><td>S21</td><td>API Auth &amp; RBAC</td><td>Sales sees outbound answers; only GRC and legal see full vendor contracts.</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2>5. Enterprise SaaS and PaaS Appeal</h2>
+
+<p>If you run AI or product engineering at an enterprise SaaS or PaaS company, these are the design choices
+that matter:</p>
+<ul>
+  <li><strong>It starts from a buyer's problem, not a model.</strong> Vendor risk and security
+    questionnaires already have owners (GRC, procurement, security, sales), budgets and deadlines.
+    Each answer speeds up a vendor onboarding or a deal.</li>
+  <li><strong>Governance is built in from the start.</strong> PII is redacted at three layers
+    (ingestion, query and answer). Every answer is cited, there's a redaction audit log, and
+    prompt-injection defense and RBAC are on the roadmap. That is what a CISO asks about first.</li>
+  <li><strong>Evals come before features.</strong> Faithfulness checks and a CI gate on the
+    roadmap (S13, S15, S20) mean that quality is measured, not demoed.</li>
+  <li><strong>Agents keep a human in the loop.</strong> The S17 agent files risk tickets, but only
+    after a person approves. That is the right default for anything that touches a risk register.</li>
+  <li><strong>One pipeline serves many use cases.</strong> The pipeline code is business-agnostic.
+    Metadata fields, PII rules, prompts and eval questions live in a <code>use-cases/*.md</code> file.
+    Contract review for legal or policy Q&amp;A for HR is a new use-case file, not a rewrite.</li>
+  <li><strong>The path to product is Customer Zero.</strong> Prove it on your own vendors first, then
+    sell it as a skill inside an existing product line.</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2>What's next (Areas)</h2>
+<p>
+  Only S1 (Data Sources) is built so far: the 11 synthetic, cross-linked documents above, with PII
+  planted on purpose so redaction has something to catch. Next comes Phase 1 (S2 loading, S3/S14
+  clause-aware chunking, S4 metadata, S5 PII redaction, S6 embeddings and S7 the FAISS index). After
+  that, retrieval and generation (S8–S12) lead to the first milestone: the Stratocore showcase
+  question answered with citations in the terminal. Evals (S13, S15), the web UIs (S16) and the
+  LangGraph vendor-review agent (S17) follow, and the hardening steps (S18–S21) come last. Each phase
+  gets its own post.
+</p>
+
+</body>
+</html>
