@@ -24,9 +24,26 @@ Link the docs together so cross-document questions work. Both SOWs reference one
 one audit report covers a vendor named in a contract.
 
 ## PII protection (three layers)
-1. **Ingestion (S5):** redact names, signatures, emails, phone numbers, and addresses before embedding or storage.
-2. **Query (S8):** scrub PII from the user's question before it reaches the LLM.
-3. **Answer (S12):** check the final answer for PII before returning it.
+**Redact people, not companies.**
+- **Personal data of any individual** (customer, employee, signatory, auditor, notice contact): names,
+  signatures, emails, phone numbers, home addresses, government IDs.
+- **Secrets and financial data:** bank account and routing numbers, payment card numbers, API keys,
+  passwords.
+- **Keep:** vendor, company, and contract-party names, business addresses, and contract terms, so
+  metadata (S4) and questions like "the Acme MSA" still work.
+
+**How:**
+- **Typed placeholders, not blanks:** `[PERSON_1]`, `[EMAIL_2]`, `[BANK_ACCOUNT_1]`, numbered per
+  document so answers stay readable ("signed by [PERSON_1]").
+- **Detection:** Microsoft Presidio (NER) for names, locations, and IDs, plus regex for card numbers,
+  bank numbers, and keys.
+- **Redaction log:** per chunk, record the entity type and count, never the original value. This is the
+  audit trail.
+
+**Layers:**
+1. **Ingestion (S5):** redact before embedding or storage.
+2. **Query (S8):** redact the user's question before it reaches the LLM.
+3. **Answer (S12):** check the final answer before returning it.
 
 ## How each step applies
 
@@ -35,12 +52,12 @@ one audit report covers a vendor named in a contract.
 | S1–S2 | Load the 10 PDFs |
 | S3, S14 | Chunk by clause and section so clauses aren't split |
 | S4 | Metadata: doc type, vendor, parties, effective date, framework |
-| S5 | PII redaction at ingestion |
+| S5 | PII and secrets redaction at ingestion (Presidio + regex, typed placeholders, redaction log) |
 | S6–S7 | Embeddings + FAISS |
-| S8 | Query rewriting + query-side PII scrub |
+| S8 | Query rewriting + query-side redaction |
 | S9 | Hybrid search: BM25 catches "Section 8.2", control IDs like "CC6.1", dollar caps |
 | S10 | Cross-encoder reranking puts the exact clause first |
-| S11–S12 | Answers cite the doc and clause; answer-side PII check |
+| S11–S12 | Answers cite the doc and clause; answer-side redaction check |
 | S13, S15 | Faithfulness evals + LangSmith tracing (audit trail) |
 | S16 | Gradio / Streamlit demo UIs |
 

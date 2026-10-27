@@ -18,24 +18,27 @@ Not legal advice.
 
 ## Pipeline steps
 
-| Step | Name | Status |
-|---|---|---|
-| S1 | Data Sources | Not started |
-| S2 | Document Loading | Not started |
-| S3 | Meaningful Chunking | Not started |
-| S4 | Metadata Extraction | Not started |
-| S5 | Security & PII Sanitization | Not started |
-| S6 | Embeddings | Not started |
-| S7 | Vector Database | Not started |
-| S8 | Query Rewriting | Not started |
-| S9 | Hybrid Search | Not started |
-| S10 | Reranking | Not started |
-| S11 | Context Assembly | Not started |
-| S12 | LLM Generation | Not started |
-| S13 | Evaluation | Not started |
-| S14 | Semantic / Recursive Chunking | Not started |
-| S15 | Advanced Evaluation & Observability | Not started |
-| S16 | Web Interfaces (FastAPI `/ask` + Gradio / Streamlit UIs for testing) — not in the PDF | Not started |
+"Adds from restaurant" lists features reused from `restaurant-ai-platform` (its F numbers), built as
+part of that step.
+
+| Step | Name | Adds from restaurant | Status |
+|---|---|---|---|
+| S1 | Data Sources | | Not started |
+| S2 | Document Loading | | Not started |
+| S3 | Meaningful Chunking | | Not started |
+| S4 | Metadata Extraction | | Not started |
+| S5 | Security & PII Sanitization | | Not started |
+| S6 | Embeddings | **F2** LLM & embeddings provider (OpenAI or Azure) in `core/llm.py`; first needed here, reused by S8, S12, S13 | Not started |
+| S7 | Vector Database | **F3** FAISS index cache (`save_local` / `load_local`) so docs aren't re-embedded every run | Not started |
+| S8 | Query Rewriting | | Not started |
+| S9 | Hybrid Search | | Not started |
+| S10 | Reranking | | Not started |
+| S11 | Context Assembly | | Not started |
+| S12 | LLM Generation | | Not started |
+| S13 | Evaluation | | Not started |
+| S14 | Semantic / Recursive Chunking | | Not started |
+| S15 | Advanced Evaluation & Observability | **F6** token & cost tracking per call; **F11** SQLite usage log (no text-to-SQL), the audit trail alongside the S5 redaction log | Not started |
+| S16 | Web Interfaces (FastAPI `/ask` + Gradio / Streamlit UIs for testing) — not in the PDF | | Not started |
 
 ## Setup
 
