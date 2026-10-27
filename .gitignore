@@ -20,3 +20,6 @@ data/raw/
 
 # Local Claude Code rules
 CLAUDE.md
+
+# Checklist source (checklist.html is the published copy)
+checklist.csv

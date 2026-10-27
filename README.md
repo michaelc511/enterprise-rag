@@ -1,8 +1,12 @@
 # Enterprise RAG
 
-RAG (Retrieval-Augmented Generation) assistant over internal enterprise documents — policy manuals,
-technical specifications, and compliance PDFs — giving engineering and support teams accurate,
-cited answers. Built step by step from the 15-step pipeline in the reference PDF below.
+RAG (Retrieval-Augmented Generation) assistant over enterprise documents — vendor contracts, audit
+reports, and compliance policies — giving procurement, security, GRC, and legal teams accurate, cited
+answers. Built step by step from the 15-step pipeline in the reference PDF below, plus S16 (web UIs).
+
+**Active use case:** [Vendor Risk & Compliance](use-cases/vendor-risk-compliance.md). The pipeline is
+business-agnostic; each use case in `use-cases/` defines its docs, metadata, PII rules, and demo questions.
+Not legal advice.
 
 ## Files
 
@@ -10,6 +14,7 @@ cited answers. Built step by step from the 15-step pipeline in the reference PDF
 |---|---|
 | `15 Steps in Building Enterprise-Grade AI Agents_ The Complete 15-Step RAG Pipeline Architecture.pdf` | Reference architecture — the 15 steps (S1–S15) this project implements |
 | `README.md` | This file |
+| `use-cases/vendor-risk-compliance.md` | Active use case: Vendor Risk & Compliance (contracts, audit reports, policies) |
 
 ## Pipeline steps
 
@@ -30,6 +35,7 @@ cited answers. Built step by step from the 15-step pipeline in the reference PDF
 | S13 | Evaluation | Not started |
 | S14 | Semantic / Recursive Chunking | Not started |
 | S15 | Advanced Evaluation & Observability | Not started |
+| S16 | Web Interfaces (FastAPI `/ask` + Gradio / Streamlit UIs for testing) — not in the PDF | Not started |
 
 ## Setup
 
