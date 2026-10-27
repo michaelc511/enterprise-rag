@@ -9,7 +9,6 @@ cited answers. Built step by step from the 15-step pipeline in the reference PDF
 | File | Purpose |
 |---|---|
 | `15 Steps in Building Enterprise-Grade AI Agents_ The Complete 15-Step RAG Pipeline Architecture.pdf` | Reference architecture — the 15 steps (S1–S15) this project implements |
-| `CLAUDE.md` | Project rules for Claude Code (authorship, accuracy, style, finishing a step) |
 | `README.md` | This file |
 
 ## Pipeline steps

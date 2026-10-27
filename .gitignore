@@ -17,3 +17,6 @@ vectorstores/
 data/raw/
 
 .DS_Store
+
+# Local Claude Code rules
+CLAUDE.md
