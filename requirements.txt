@@ -1,0 +1,2 @@
+# S1: sample-doc generator (scripts/make_sample_docs.py)
+reportlab==5.1.0

@@ -13,8 +13,8 @@ __pycache__/
 faiss_vector_index/
 vectorstores/
 
-# Source enterprise docs (internal — never commit)
-data/raw/
+# Use-case docs and indexes (data/<use-case>/raw, data/<use-case>/index) — never commit
+data/
 
 .DS_Store
 

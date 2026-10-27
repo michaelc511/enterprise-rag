@@ -2,26 +2,46 @@
 
 **Status:** Active use case.
 
+**Company:** OpsVault (fictional). See `company/vendor-risk-compliance/opsvault.md` for its products,
+vendors, and frameworks.
+
 ## Business summary
-- **What it is:** A RAG assistant for third-party risk management (TPRM). It ingests, secures, indexes,
-  and retrieves vendor contracts, vendor audit reports, and internal compliance frameworks and policies.
-- **Core value:** Procurement, security, GRC (governance, risk & compliance), and legal teams get cited
-  answers about high-stakes contracts and compliance requirements. Governance comes from PII
-  redaction, grounded answers, and automated evaluation guards.
+- **What it is:** A RAG assistant for third-party risk management (TPRM), shipped as an OpsVault AI
+  skill in OpsVault Risk & Compliance (vendor risk) and OpsVault Supply Chain (supplier onboarding).
+  It ingests, secures, indexes, and retrieves vendor contracts, vendor audit reports, and OpsVault's
+  own compliance policies.
+- **Core value:** Procurement, security, GRC, legal, and sales teams get cited answers about
+  high-stakes contracts and compliance requirements. Governance comes from PII redaction, grounded
+  answers, and automated evaluation guards.
 - **Disclaimer:** Not legal advice. The answer prompt and the README both say so.
 
-## Source documents (`data/raw/`, gitignored)
+## Two stages (Customer Zero)
+1. **Internal first:** OpsVault's own teams use it to review their vendors and answer their customers.
+2. **Then customers:** sold to OpsVault customers inside Risk & Compliance. Each gap found becomes a
+   risk ticket (planned agent step, via a mock OpsVault Table API).
 
-| Type | Count | Source |
-|---|---|---|
-| Master Services Agreements (MSAs) | 2 | Public templates or SEC EDGAR exhibits |
-| Non-Disclosure Agreements (NDAs) | 2 | Public templates |
-| Statements of Work (SOWs) | 2 | Written to reference one of the MSAs |
-| Compliance frameworks & policy manuals | 2 | NIST 800-53 / CIS Controls excerpt + an internal-style security policy |
-| Vendor & third-party audit reports | 2 | **Synthetic** (real SOC 2 reports are confidential), labeled as synthetic |
+## Two directions
+- **Inbound (vendor review):** "Is this vendor safe?" Check a vendor's MSA and SOC 2 report against
+  OpsVault's policy and flag gaps.
+- **Outbound (security questionnaires):** "Prove we're safe." Answer customers' security
+  questionnaires with citations from OpsVault's own policies and SOC 2 report.
+
+## Source documents (`data/vendor-risk-compliance/raw/`, gitignored)
+
+All synthetic for now, written as OpsVault documents. Real CUAD contracts can be swapped in later
+before the labeled evals (CUAD has no NDAs).
+
+| Folder | Type | Count | Notes |
+|---|---|---|---|
+| `msa/` | Master Services Agreements | 2 | Two key vendors (e.g. cloud hosting, AI model provider) |
+| `nda/` | Non-Disclosure Agreements | 2 | |
+| `sow/` | Statements of Work | 2 | Both reference one of the MSAs |
+| `policy/` | Compliance framework & policy | 2 | SOC 2-aligned framework excerpt + OpsVault's security policy |
+| `audit-report/` | Vendor SOC 2 audit reports | 2 | **Synthetic**, labeled as such; one covers a vendor named in an MSA |
+| `questionnaire/` | Customer security questionnaires | 1-2 | For the outbound direction |
 
 Link the docs together so cross-document questions work. Both SOWs reference one MSA, and at least
-one audit report covers a vendor named in a contract.
+one audit report covers a vendor named in a contract. Plant realistic PII so S5 has something to catch.
 
 ## PII protection (three layers)
 **Redact people, not companies.**
@@ -30,7 +50,7 @@ one audit report covers a vendor named in a contract.
 - **Secrets and financial data:** bank account and routing numbers, payment card numbers, API keys,
   passwords.
 - **Keep:** vendor, company, and contract-party names, business addresses, and contract terms, so
-  metadata (S4) and questions like "the Acme MSA" still work.
+  metadata (S4) and questions like "the cloud vendor's MSA" still work.
 
 **How:**
 - **Typed placeholders, not blanks:** `[PERSON_1]`, `[EMAIL_2]`, `[BANK_ACCOUNT_1]`, numbered per
@@ -62,8 +82,11 @@ one audit report covers a vendor named in a contract.
 | S16 | Gradio / Streamlit demo UIs |
 
 ## Demo questions
-- "What's the liability cap in the Acme MSA?" (single contract, exact number)
-- "Which SOWs fall under the Acme MSA?" (metadata / cross-reference)
-- "What does our policy require for access reviews?" (internal policy)
-- "Acme's MSA requires encryption at rest. Does their audit report confirm it, and does that meet our policy?"
-  (cross-document, the showcase question)
+Vendor names are placeholders until the documents are written.
+- "What's the liability cap in the cloud hosting vendor's MSA?" (single contract, exact number)
+- "Which SOWs fall under that MSA?" (metadata / cross-reference)
+- "What does OpsVault's policy require for access reviews?" (internal policy)
+- "Does the AI model provider's contract forbid training on OpsVault customer data?" (current AI risk)
+- "The cloud vendor's MSA requires encryption at rest. Does their SOC 2 report confirm it, and does that
+  meet OpsVault's policy?" (cross-document, the showcase question)
+- "A customer asks: do you encrypt data at rest? Answer from our SOC 2 and policy." (outbound)

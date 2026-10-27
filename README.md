@@ -4,7 +4,8 @@ RAG (Retrieval-Augmented Generation) assistant over enterprise documents — ven
 reports, and compliance policies — giving procurement, security, GRC, and legal teams accurate, cited
 answers. Built step by step from the 15-step pipeline in the reference PDF below, plus S16 (web UIs).
 
-**Active use case:** [Vendor Risk & Compliance](use-cases/vendor-risk-compliance.md). The pipeline is
+**Company:** [OpsVault](company/vendor-risk-compliance/opsvault.md), a fictional enterprise workflow
+platform (IT, HR, customer service, risk, finance, and supply-chain workflows with AI agents). **Active use case:** [Vendor Risk & Compliance](use-cases/vendor-risk-compliance.md). The pipeline is
 business-agnostic; each use case in `use-cases/` defines its docs, metadata, PII rules, and demo questions.
 Not legal advice.
 
@@ -14,35 +15,80 @@ Not legal advice.
 |---|---|
 | `15 Steps in Building Enterprise-Grade AI Agents_ The Complete 15-Step RAG Pipeline Architecture.pdf` | Reference architecture — the 15 steps (S1–S15) this project implements |
 | `README.md` | This file |
+| `company/vendor-risk-compliance/opsvault.md` | Fictional company profile: OpsVault's products, key vendors, frameworks |
+| `scripts/make_sample_docs.py` | Builds the synthetic source PDFs from Markdown (`data/<use-case>/source/` → `data/<use-case>/raw/`) |
+| `requirements.txt` | Python dependencies |
+| `data/vendor-risk-compliance/` | Source PDFs (`raw/`) and FAISS index (`index/`) for the use case (gitignored) |
 | `use-cases/vendor-risk-compliance.md` | Active use case: Vendor Risk & Compliance (contracts, audit reports, policies) |
 
 ## Pipeline steps
 
-"Adds from restaurant" lists features reused from `restaurant-ai-platform` (its F numbers), built as
-part of that step.
+Steps are grouped into phases in build order. S numbers match the reference PDF, so S14 sits in
+Phase 1 next to S3, the chunking it improves. "Adds from restaurant" lists features reused from
+`restaurant-ai-platform` (its F numbers), built as part of that step.
 
+### Phase 1 — Ingestion & Indexing (offline, once per doc update)
 | Step | Name | Adds from restaurant | Status |
 |---|---|---|---|
 | S1 | Data Sources | | Not started |
 | S2 | Document Loading | | Not started |
 | S3 | Meaningful Chunking | | Not started |
+| S14 | Semantic / Recursive Chunking | | Not started |
 | S4 | Metadata Extraction | | Not started |
 | S5 | Security & PII Sanitization | | Not started |
-| S6 | Embeddings | **F2** LLM & embeddings provider (OpenAI or Azure) in `core/llm.py`; first needed here, reused by S8, S12, S13 | Not started |
-| S7 | Vector Database | **F3** FAISS index cache (`save_local` / `load_local`) so docs aren't re-embedded every run | Not started |
-| S8 | Query Rewriting | | Not started |
-| S9 | Hybrid Search | | Not started |
+| S6 | Embeddings | **F2** LLM & embeddings provider (OpenAI or Azure) in `core/llm.py`; reused by S8, S12, S13 | Not started |
+| S7 | Vector Database | **F3** FAISS index cache so docs aren't re-embedded every run | Not started |
+
+### Phase 2 — Pre-retrieval (every query)
+| Step | Name | Adds from restaurant | Status |
+|---|---|---|---|
+| S8 | Query Rewriting (+ query-side redaction) | | Not started |
+
+### Phase 3 — Retrieval
+| Step | Name | Adds from restaurant | Status |
+|---|---|---|---|
+| S9 | Hybrid Search (BM25 + vector) | | Not started |
+
+### Phase 4 — Post-retrieval
+| Step | Name | Adds from restaurant | Status |
+|---|---|---|---|
 | S10 | Reranking | | Not started |
 | S11 | Context Assembly | | Not started |
-| S12 | LLM Generation | | Not started |
+
+### Phase 5 — Generation  ✅ milestone: working RAG demo in the terminal
+| Step | Name | Adds from restaurant | Status |
+|---|---|---|---|
+| S12 | LLM Generation (+ answer-side redaction check) | | Not started |
+
+### Phase 6 — Evaluation & Observability
+| Step | Name | Adds from restaurant | Status |
+|---|---|---|---|
 | S13 | Evaluation | | Not started |
-| S14 | Semantic / Recursive Chunking | | Not started |
-| S15 | Advanced Evaluation & Observability | **F6** token & cost tracking per call; **F11** SQLite usage log (no text-to-SQL), the audit trail alongside the S5 redaction log | Not started |
-| S16 | Web Interfaces (FastAPI `/ask` + Gradio / Streamlit UIs for testing) — not in the PDF | | Not started |
+| S15 | Advanced Evaluation & Observability | **F6** token & cost tracking; **F11** SQLite usage log (audit trail) | Not started |
+
+### Phase 7 — Serving (not in the PDF)
+| Step | Name | Adds from restaurant | Status |
+|---|---|---|---|
+| S16 | Web Interfaces (FastAPI `/ask` + Gradio / Streamlit) | | Not started |
 
 ## Setup
 
-TBA — added with S1/S2.
+Create and activate a Python 3.11 venv (from this folder), then install dependencies:
+
+```
+/opt/homebrew/bin/python3.11 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+Build the sample documents (11 synthetic PDFs for the active use case):
+
+```
+python scripts/make_sample_docs.py
+```
+
+`data/` is gitignored, so the Markdown sources in `data/vendor-risk-compliance/source/` and the PDFs
+stay local.
 
 ## Feature toggles
 
