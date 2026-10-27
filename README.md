@@ -15,8 +15,11 @@ Not legal advice.
 |---|---|
 | `15 Steps in Building Enterprise-Grade AI Agents_ The Complete 15-Step RAG Pipeline Architecture.pdf` | Reference architecture — the 15 steps (S1–S15) this project implements |
 | `README.md` | This file |
+| `features.html` | Full write-up per step (S1–S21), grouped by phase; sections are TBA until each step is built |
 | `company/vendor-risk-compliance/opsvault.md` | Fictional company profile: OpsVault's products, key vendors, frameworks |
-| `scripts/make_sample_docs.py` | Builds the synthetic source PDFs from Markdown (`data/<use-case>/source/` → `data/<use-case>/raw/`) |
+| `scripts/build_checklist.py` | Converts `checklist.csv` (gitignored source) into `checklist.html` |
+| `checklist.html` | Step status table (S1–S21), grouped by phase |
+| `tests/` | Mocked unit tests (`pytest`), no API key or network |
 | `requirements.txt` | Python dependencies |
 | `data/vendor-risk-compliance/` | Source PDFs (`raw/`) and FAISS index (`index/`) for the use case (gitignored) |
 | `use-cases/vendor-risk-compliance.md` | Active use case: Vendor Risk & Compliance (contracts, audit reports, policies) |
@@ -30,7 +33,7 @@ Phase 1 next to S3, the chunking it improves. "Adds from restaurant" lists featu
 ### Phase 1 — Ingestion & Indexing (offline, once per doc update)
 | Step | Name | Adds from restaurant | Status |
 |---|---|---|---|
-| S1 | Data Sources | | Not started |
+| S1 | Data Sources | | Done |
 | S2 | Document Loading | | Not started |
 | S3 | Meaningful Chunking | | Not started |
 | S14 | Semantic / Recursive Chunking | | Not started |
@@ -71,6 +74,15 @@ Phase 1 next to S3, the chunking it improves. "Adds from restaurant" lists featu
 |---|---|---|---|
 | S16 | Web Interfaces (FastAPI `/ask` + Gradio / Streamlit) | | Not started |
 
+### Phase 8 — Agentic RAG & Production Hardening (not in the PDF)
+| Step | Name | Adds from restaurant | Status |
+|---|---|---|---|
+| S17 | Agentic RAG (LangGraph): multi-step vendor review with tools (`search_contracts`, `search_audit_reports`, `check_policy`, `create_risk_ticket` via a mock Table API), human approval before tickets, saved state | **F13** LangGraph engine; **F16** persistent thread checkpointing | Planned |
+| S18 | Prompt-Injection Defense: treat retrieved vendor docs as untrusted data | **F22** | Deferred |
+| S19 | Guardrails: off-topic and "not legal advice" checks (`GUARDRAILS_ENABLED`) | **F19** | Deferred |
+| S20 | CI Eval Gate: `pytest` + evals on every push | **F20** | Deferred |
+| S21 | API Auth & RBAC (optional) | **F21** (not built in restaurant) | Deferred |
+
 ## Setup
 
 Create and activate a Python 3.11 venv (from this folder), then install dependencies:
@@ -81,14 +93,8 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Build the sample documents (11 synthetic PDFs for the active use case):
-
-```
-python scripts/make_sample_docs.py
-```
-
-`data/` is gitignored, so the Markdown sources in `data/vendor-risk-compliance/source/` and the PDFs
-stay local.
+Put the source PDFs in `data/vendor-risk-compliance/raw/<type>/` (11 synthetic PDFs for the active use
+case; see the use-case file for the list). `data/` is gitignored, so documents stay local.
 
 ## Feature toggles
 
@@ -96,4 +102,9 @@ None yet. Toggles are env vars that default to on — set to `false` to turn off
 
 ## Tests & evals
 
-TBA — `pytest` for fully mocked unit tests (`tests/`), real-key checks in `evaluation/`.
+```
+pytest                              # mocked unit tests, no API key or network
+python scripts/build_checklist.py   # rebuild checklist.html after editing checklist.csv
+```
+
+Real-key checks will live in `evaluation/` (S13).

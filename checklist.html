@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Enterprise RAG Step Checklist</title>
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --muted:#6b7280; --border:#e5e7eb; --stripe:#f9fafb;
+          --header-bg:#111827; --header-fg:#fff; }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:2rem; background:var(--bg); color:var(--fg);
+         font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+  h1 { font-size:1.4rem; margin:0 0 0.25rem; }
+  p.subtitle { margin:0 0 1.5rem; color:var(--muted); font-size:0.9rem; }
+  .table-wrap { overflow-x:auto; border:1px solid var(--border); border-radius:8px; }
+  table { border-collapse:collapse; width:100%; min-width:1200px; font-size:0.85rem; }
+  thead th { background:var(--header-bg); color:var(--header-fg); text-align:left;
+             padding:0.6rem 0.75rem; position:sticky; top:0; white-space:nowrap; }
+  tbody td { padding:0.55rem 0.75rem; border-bottom:1px solid var(--border); vertical-align:top; }
+  tbody tr:nth-child(even) { background:var(--stripe); }
+  tbody tr:hover { background:#eef2ff; }
+  td.num, th.num { text-align:center; white-space:nowrap; }
+  td.status { white-space:nowrap; }
+  .badge { display:inline-block; padding:0.15rem 0.55rem; border-radius:999px; font-size:0.75rem; font-weight:600; }
+  .badge.done { background:#d1fae5; color:#065f46; }
+  .badge.not-started { background:#fee2e2; color:#991b1b; }
+  .badge.planned, .badge.deferred { background:#fef3c7; color:#92400e; }
+  tr.phase-row td { background:var(--header-bg); color:var(--header-fg); font-weight:700;
+                    font-size:0.95rem; padding:0.55rem 0.75rem; }
+  tr.phase-row td .phase-num { color:#93c5fd; margin-right:0.4rem; }
+  code { font-size:0.8rem; background:#f3f4f6; padding:0.1rem 0.3rem; border-radius:4px; }
+</style>
+</head>
+<body>
+  <h1>Enterprise RAG Step Checklist</h1>
+  <p class="subtitle">Converted from checklist.csv by scripts/build_checklist.py</p>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th class="num">Step #</th><th>Step Name</th><th>Status</th><th>Buzzwords &amp; Concepts</th><th>Primary Tools &amp; Libraries</th><th>Target Location</th><th class="num">New .py File?</th><th>Est. Time (With AI)</th><th>Complexity</th><th class="num">Hiring Value</th><th>Performance &amp; Metrics Measured</th></tr></thead>
+    <tbody>
+      <tr class="phase-row"><td colspan="11"><span class="phase-num">Phase 1</span>Ingestion &amp; Indexing</td></tr>
+      <tr><td class="num">S1</td><td>Data Sources</td><td class="status"><span class="badge done">Done</span></td><td>Corpus Curation, Synthetic Data, Domain Dataset, TPRM</td><td>PDF documents (policy, MSA, SOW, NDA, SOC 2, questionnaire)</td><td><code>data/vendor-risk-compliance/raw/</code>, <code>company/</code>, <code>use-cases/</code></td><td class="num">N</td><td>60 mins</td><td>Easy</td><td class="num">6 / 10</td><td>Docs per Type (11 across 6 folders), Planted PII Items, Designed Gaps (8)</td></tr>
+      <tr><td class="num">S2</td><td>Document Loading</td><td class="status"><span class="badge not-started">Not Started</span></td><td>Ingestion, Text Normalization, Data Lineage</td><td>PyPDFLoader, DirectoryLoader</td><td><code>ingest/</code></td><td class="num">Y</td><td>30 mins</td><td>Easy</td><td class="num">6 / 10</td><td>Pages Loaded, Extraction Errors</td></tr>
+      <tr><td class="num">S3</td><td>Meaningful Chunking</td><td class="status"><span class="badge not-started">Not Started</span></td><td>Chunking, Token Budgets</td><td>RecursiveCharacterTextSplitter</td><td><code>ingest/</code></td><td class="num">N</td><td>20 mins</td><td>Easy</td><td class="num">6 / 10</td><td>Chunk Count, Avg Chunk Size</td></tr>
+      <tr><td class="num">S14</td><td>Semantic / Recursive Chunking</td><td class="status"><span class="badge not-started">Not Started</span></td><td>Semantic Chunking, Clause-Aware Splitting</td><td>RecursiveCharacterTextSplitter (clause separators)</td><td><code>ingest/</code></td><td class="num">N</td><td>30 mins</td><td>Medium</td><td class="num">7 / 10</td><td>Split Clauses, Chunk Coherence</td></tr>
+      <tr><td class="num">S4</td><td>Metadata Extraction</td><td class="status"><span class="badge not-started">Not Started</span></td><td>Metadata Enrichment, Filtering, Lineage</td><td>Document.metadata</td><td><code>ingest/</code></td><td class="num">N</td><td>30 mins</td><td>Easy</td><td class="num">7 / 10</td><td>Chunks with Full Metadata %</td></tr>
+      <tr><td class="num">S5</td><td>Security &amp; PII Sanitization</td><td class="status"><span class="badge not-started">Not Started</span></td><td>PII Redaction, Data Governance, Audit Trail</td><td>Microsoft Presidio, regex</td><td><code>ingest/</code></td><td class="num">Y</td><td>60 mins</td><td>Medium</td><td class="num">9 / 10</td><td>PII Recall on Planted Items, Over-Redaction Rate</td></tr>
+      <tr><td class="num">S6</td><td>Embeddings (+F2)</td><td class="status"><span class="badge not-started">Not Started</span></td><td>Embeddings, Provider Abstraction</td><td>OpenAIEmbeddings, core/llm.py</td><td><code>core/ + ingest/</code></td><td class="num">Y</td><td>30 mins</td><td>Easy</td><td class="num">6 / 10</td><td>Embedding Cost, Vector Dimension</td></tr>
+      <tr><td class="num">S7</td><td>Vector Database (+F3)</td><td class="status"><span class="badge not-started">Not Started</span></td><td>Vector Store, ANN Indexing, Caching</td><td>FAISS</td><td><code>ingest/</code></td><td class="num">N</td><td>30 mins</td><td>Easy</td><td class="num">6 / 10</td><td>Index Build Time, Cache Hit</td></tr>
+      <tr class="phase-row"><td colspan="11"><span class="phase-num">Phase 2</span>Pre-retrieval</td></tr>
+      <tr><td class="num">S8</td><td>Query Rewriting</td><td class="status"><span class="badge not-started">Not Started</span></td><td>Pre-retrieval, Query Expansion, Query-Side Redaction</td><td>ChatPromptTemplate, ChatOpenAI</td><td><code>retrieval/</code></td><td class="num">Y</td><td>30 mins</td><td>Easy</td><td class="num">7 / 10</td><td>Rewrite Latency, Retrieval Lift</td></tr>
+      <tr class="phase-row"><td colspan="11"><span class="phase-num">Phase 3</span>Retrieval</td></tr>
+      <tr><td class="num">S9</td><td>Hybrid Search (BM25 + Vector)</td><td class="status"><span class="badge not-started">Not Started</span></td><td>Hybrid Dense/Sparse, Rank Fusion</td><td>BM25Retriever, EnsembleRetriever</td><td><code>retrieval/</code></td><td class="num">N</td><td>35 mins</td><td>Medium</td><td class="num">8 / 10</td><td>Recall@k, Exact-Term Hit Rate</td></tr>
+      <tr class="phase-row"><td colspan="11"><span class="phase-num">Phase 4</span>Post-retrieval</td></tr>
+      <tr><td class="num">S10</td><td>Reranking</td><td class="status"><span class="badge not-started">Not Started</span></td><td>Cross-Encoder, Two-Stage Retrieval</td><td>bge-reranker / FlashRank</td><td><code>retrieval/</code></td><td class="num">N</td><td>35 mins</td><td>Medium</td><td class="num">8 / 10</td><td>MRR, Precision@k</td></tr>
+      <tr><td class="num">S11</td><td>Context Assembly</td><td class="status"><span class="badge not-started">Not Started</span></td><td>Context Engineering, Citations, Token Budget</td><td>Python</td><td><code>retrieval/</code></td><td class="num">N</td><td>20 mins</td><td>Easy</td><td class="num">6 / 10</td><td>Context Tokens, Citation Coverage</td></tr>
+      <tr class="phase-row"><td colspan="11"><span class="phase-num">Phase 5</span>Generation</td></tr>
+      <tr><td class="num">S12</td><td>LLM Generation</td><td class="status"><span class="badge not-started">Not Started</span></td><td>Grounded Generation, Citations, Answer-Side Redaction</td><td>ChatOpenAI, ChatPromptTemplate</td><td><code>generation/</code></td><td class="num">Y</td><td>30 mins</td><td>Easy</td><td class="num">7 / 10</td><td>Refusal Correctness, Citation Accuracy</td></tr>
+      <tr class="phase-row"><td colspan="11"><span class="phase-num">Phase 6</span>Evaluation &amp; Observability</td></tr>
+      <tr><td class="num">S13</td><td>Evaluation</td><td class="status"><span class="badge not-started">Not Started</span></td><td>LLM-as-Judge, Faithfulness, Answer Relevance</td><td>ChatOpenAI judge</td><td><code>evaluation/</code></td><td class="num">Y</td><td>45 mins</td><td>Medium</td><td class="num">9 / 10</td><td>Faithfulness, Relevance, Designed-Gap Detection</td></tr>
+      <tr><td class="num">S15</td><td>Advanced Evaluation &amp; Observability (+F6 F11)</td><td class="status"><span class="badge not-started">Not Started</span></td><td>Tracing, Cost Tracking, Audit Log</td><td>LangSmith, SQLite</td><td><code>evaluation/ + core/</code></td><td class="num">Y</td><td>45 mins</td><td>Medium</td><td class="num">9 / 10</td><td>Latency per Step, USD / Query, Error Rate</td></tr>
+      <tr class="phase-row"><td colspan="11"><span class="phase-num">Phase 7</span>Serving</td></tr>
+      <tr><td class="num">S16</td><td>Web Interfaces</td><td class="status"><span class="badge not-started">Not Started</span></td><td>API Serving, Demo UI</td><td>FastAPI, Gradio, Streamlit</td><td><code>api/ + web-demo/</code></td><td class="num">Y</td><td>45 mins</td><td>Easy</td><td class="num">6 / 10</td><td>Endpoint Latency</td></tr>
+      <tr class="phase-row"><td colspan="11"><span class="phase-num">Phase 8</span>Agentic RAG &amp; Production Hardening</td></tr>
+      <tr><td class="num">S17</td><td>Agentic RAG (+F13 F16)</td><td class="status"><span class="badge planned">Planned</span></td><td>Agentic RAG, Tool Registry, Human-in-the-Loop, State</td><td>LangGraph</td><td><code>agents/</code></td><td class="num">Y</td><td>90 mins</td><td>Hard</td><td class="num">10 / 10</td><td>Task Success Rate, Tool-Call Accuracy, Steps per Task</td></tr>
+      <tr><td class="num">S18</td><td>Prompt-Injection Defense (+F22)</td><td class="status"><span class="badge deferred">Deferred</span></td><td>AI Security, Untrusted Context</td><td>Delimiter Isolation</td><td><code>core/</code></td><td class="num">Y</td><td>40 mins</td><td>Medium</td><td class="num">8 / 10</td><td>Injection Block Rate</td></tr>
+      <tr><td class="num">S19</td><td>Guardrails (+F19)</td><td class="status"><span class="badge deferred">Deferred</span></td><td>Guardrails, Intent Gating</td><td>Pydantic Classifier</td><td><code>core/</code></td><td class="num">Y</td><td>45 mins</td><td>Medium</td><td class="num">7 / 10</td><td>Off-Topic Rejection Rate</td></tr>
+      <tr><td class="num">S20</td><td>CI Eval Gate (+F20)</td><td class="status"><span class="badge deferred">Deferred</span></td><td>CI/CD, Quality Gate</td><td>GitHub Actions, pytest</td><td><code>.github/workflows/</code></td><td class="num">N</td><td>40 mins</td><td>Medium</td><td class="num">8.5 / 10</td><td>Eval Pass/Fail per Build</td></tr>
+      <tr><td class="num">S21</td><td>API Auth &amp; RBAC (+F21)</td><td class="status"><span class="badge deferred">Deferred</span></td><td>API Security, Role-Based Access</td><td>FastAPI Security</td><td><code>core/</code></td><td class="num">Y</td><td>45 mins</td><td>Medium</td><td class="num">8 / 10</td><td>Unauthorized Request Rejection Rate</td></tr>
+    </tbody>
+  </table>
+  </div>
+</body>
+</html>

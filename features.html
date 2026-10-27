@@ -1,0 +1,1627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Enterprise RAG Features</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    max-width: 860px;
+    margin: 40px auto;
+    padding: 0 20px;
+    line-height: 1.55;
+    color: #1a1a1a;
+    background: #fff;
+  }
+  h1 { border-bottom: 2px solid #333; padding-bottom: 8px; }
+  h2 {
+    margin-top: 48px;
+    font-size: 2.1em;
+    text-decoration: underline;
+    display: inline-block;
+    background: #dcf5dc;
+    border: 1px solid #4caf50;
+    border-radius: 4px;
+    padding: 6px 16px;
+  }
+  h3 { margin-top: 28px; text-decoration: underline; font-size: 1.3em; }
+  h4 { text-decoration: underline; font-size: 1.1em; }
+  code {
+    background: #f2f2f2;
+    padding: 2px 5px;
+    border-radius: 4px;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 0.92em;
+  }
+  pre {
+    background: #1e1e1e;
+    color: #e6e6e6;
+    padding: 14px 16px;
+    border-radius: 6px;
+    overflow-x: auto;
+  }
+  pre code {
+    background: none;
+    color: inherit;
+    padding: 0;
+  }
+  ul { margin: 8px 0; }
+  li { margin: 4px 0; }
+  .section-index {
+    background: #f7f7f9;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 10px 16px 10px 34px;
+    margin: 16px 0 8px;
+  }
+  .section-index-phase {
+    list-style: none;
+    margin: 10px 0 2px -18px;
+    font-weight: 700;
+    color: #555;
+  }
+  .sd-intro {
+    font-size: 1.02em;
+    color: #333;
+    border-left: 3px solid #4caf50;
+    padding-left: 12px;
+  }
+  .h3-up {
+    font-size: 0.6em;
+    font-weight: 400;
+    vertical-align: middle;
+    margin-left: 8px;
+    color: #2e7d32;
+  }
+  .h2-top {
+    font-size: 0.4em;
+    font-weight: 400;
+    vertical-align: middle;
+    margin-left: 10px;
+    color: #2e7d32;
+  }
+  .note {
+    background: #fff8e1;
+    border-left: 4px solid #f5c518;
+    padding: 10px 14px;
+    margin: 16px 0;
+  }
+  .toolbox {
+    background: #f7f7f9;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin: 16px 0;
+  }
+  .used { color: #1a7f37; font-weight: 600; }
+  .not-used { color: #b42318; font-weight: 600; }
+
+  /* Syntax highlighting for source code blocks (Pygments, monokai) */
+  .pyhl pre { background: #272822; color: #F8F8F2; }
+  .pyhl .c1 { color: #959077; } /* comment */
+  .pyhl .k  { color: #66D9EF; } /* keyword: def, class, return, if, with, ... */
+  .pyhl .kn { color: #FF4689; } /* keyword: import, from */
+  .pyhl .mi, .pyhl .mf, .pyhl .l { color: #AE81FF; } /* numbers, YAML literal scalars */
+  .pyhl .nb, .pyhl .nn, .pyhl .w, .pyhl .bp, .pyhl .nv { color: #F8F8F2; } /* builtin types, module names, whitespace, self, YAML name-variable */
+  .pyhl .nc, .pyhl .nd, .pyhl .nf { color: #A6E22E; } /* class name, decorator, function name */
+  .pyhl .o, .pyhl .ow, .pyhl .nt { color: #FF4689; } /* operators: ->, +=, and/or/not/in; YAML key (name.tag) */
+  .pyhl .s1, .pyhl .s2, .pyhl .sa, .pyhl .sd, .pyhl .si, .pyhl .s { color: #E6DB74; } /* strings, docstrings, f-string braces, YAML strings */
+  .pyhl .se { color: #AE81FF; } /* string escapes: \n */
+  .pyhl .p  { color: #F8F8F2; } /* punctuation: (), [], :, , */
+  .pyhl .kc { color: #AE81FF; } /* keyword constants: True, False, None */
+  .pyhl .ne { color: #A6E22E; } /* exception/builtin-error names */
+
+  /* Install / run / test commands and their titles, highlighted yellow */
+  .hl-title {
+    background: #fff3b0;
+    color: #1a1a1a;
+    padding: 2px 10px;
+    border-radius: 4px;
+    display: inline-block;
+    text-decoration: none;
+  }
+  pre.cmd {
+    background: #fff3b0;
+    color: #1a1a1a;
+    border: 1px solid #f5c518;
+  }
+  pre.cmd code { background: none; color: inherit; }
+
+  .toc {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 6px;
+    background: #f7f7f9;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin: 16px 0 24px;
+  }
+  .toc a {
+    color: #1a1a1a;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 3px 10px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.92em;
+  }
+  .toc a:hover { background: #f0f0f0; }
+
+  .back-to-top { margin: 6px 0 0; }
+  .back-to-top a {
+    font-size: 0.85em;
+    color: #666;
+    text-decoration: none;
+  }
+  .back-to-top a:hover { text-decoration: underline; }
+
+  .toc-phase-label {
+    flex-basis: 100%;
+    font-weight: 700;
+    font-size: 0.78em;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #666;
+    margin: 6px 0 -2px;
+  }
+  .toc-phase-label:first-child { margin-top: 0; }
+
+  .ai-dev-areas {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+    margin: 16px 0 24px;
+  }
+  .ai-dev-area {
+    background: #f7f7f9;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 12px 16px;
+  }
+  .ai-dev-area h3 { margin: 0 0 4px; font-size: 1em; }
+  .ai-dev-area p { margin: 0 0 8px; font-size: 0.88em; color: #555; }
+  .ai-dev-area ul { margin: 0; padding-left: 18px; font-size: 0.9em; }
+  .ai-dev-area li { margin: 2px 0; }
+  .ai-dev-area a { color: #1a1a1a; }
+
+  .suites {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 16px;
+    margin: 16px 0 24px;
+  }
+  .suite {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 16px 20px;
+  }
+  .suite h3 { margin: 0 0 10px; }
+  .suite-tags {
+    display: inline-block;
+    font-size: 0.7em;
+    font-weight: 600;
+    color: #666;
+    background: #f0f0f0;
+    border-radius: 4px;
+    padding: 2px 8px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+  .suite p { margin: 12px 0 4px; }
+  .suite ul { margin: 4px 0 12px; padding-left: 20px; }
+  .suite li { margin: 3px 0; }
+  .suite-coverage { font-size: 0.92em; }
+  .cov-yes { color: #15803d; }
+  .cov-partial { color: #b45309; font-weight: 600; }
+  .cov-no { color: #999; font-style: italic; }
+
+  .phase-header {
+    margin: 56px 0 0;
+    padding: 14px 20px;
+    background: #1a1a1a;
+    color: #fff;
+    border-radius: 6px;
+    border-bottom: none;
+    font-size: 1.4em;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .phase-header .phase-num {
+    color: #9ad1ff;
+    margin-right: 8px;
+  }
+  .phase-header .phase-title {
+    flex: 1;
+    min-width: 0;
+  }
+  .phase-header-img {
+    flex-shrink: 0;
+    width: 25%;
+    height: auto;
+    border-radius: 4px;
+    border: 1px solid #444;
+  }
+
+  .roadmap-h3 {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .roadmap-h3-img {
+    flex-shrink: 0;
+    width: 25%;
+    height: auto;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+  }
+
+  .blog-box {
+    border: 2px solid #333;
+    border-radius: 8px;
+    margin: 16px 0 24px;
+    width: 100%;
+    border-collapse: separate;
+  }
+  .blog-box td {
+    padding: 20px 24px;
+  }
+  .blog-box h3 {
+    margin-top: 0;
+  }
+  .blog-box h4 {
+    margin-bottom: 6px;
+  }
+  .blog-box .tags {
+    color: #666;
+    font-size: 0.9em;
+    margin-top: 20px;
+    margin-bottom: 0;
+  }
+  .f-tags {
+    display: block;
+    color: #666;
+    font-size: 0.85em;
+    margin-top: 4px;
+  }
+  .blog-box-green {
+    border-color: #2e7d32;
+  }
+  /* F7 Code Review box - mirrors notes/F7 Code Review.pdf: white title bar, black body,
+     yellow-highlighter callouts over the line-by-line breakdowns */
+  .f7-review-box {
+    border: 2px solid #000;
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 18px 0 26px;
+  }
+  .f7-review-titlebar {
+    background: #fff;
+    color: #111;
+    border-bottom: 2px solid #000;
+    padding: 10px 16px;
+    font-size: 1.4em;
+    font-weight: 700;
+  }
+  .f7-review-body {
+    background: #0c0c0c;
+    color: #eaeaea;
+    padding: 22px 26px;
+  }
+  .f7-review-body h3 {
+    color: #fff;
+    text-decoration: none;
+    font-size: 1.35em;
+    margin: 26px 0 10px;
+  }
+  .f7-review-body h3:first-child { margin-top: 0; }
+  .f7-review-body h4 {
+    color: #fff;
+    text-decoration: none;
+    font-size: 1.12em;
+    margin: 20px 0 8px;
+  }
+  .f7-review-body p { margin: 10px 0; }
+  .f7-review-body ul { margin: 8px 0; }
+  .f7-review-body li { margin: 6px 0; }
+  .f7-review-body code {
+    background: #1c1c1c;
+    color: #8bc34a;
+    border: 1px solid #2a2a2a;
+  }
+  .f7-key {
+    font-weight: 700;
+    text-decoration: underline;
+    color: #8bc34a;
+  }
+  .f7-review-body .pyhl { margin: 10px 0; font-size: 0.85em; }
+  .f7-review-body .pyhl pre { margin: 0; border: 1px solid #2a2a2a; }
+  .f7-highlight {
+    background: #fff59d;
+    color: #111;
+    margin: 12px -26px;
+    padding: 14px 26px;
+  }
+  .f7-highlight code {
+    background: #111;
+    color: #8bc34a;
+    border: none;
+  }
+  .f7-highlight .f7-key { color: #1a5e20; text-decoration-color: #1a5e20; }
+  .f7-highlight .pyhl { margin: 10px 0 0; }
+  .f7-filebar {
+    background: #000;
+    color: #fff;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 0.85em;
+    padding: 8px 16px;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 14px -26px -22px;
+  }
+  .f7-filebar .role { color: #9ad1ff; }
+  .cost-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0 20px;
+  }
+  .cost-table th, .cost-table td {
+    border: 1px solid #e0e0e0;
+    padding: 8px 12px;
+    text-align: left;
+    font-size: 0.95em;
+  }
+  .cost-table th {
+    background: #f7f7f9;
+  }
+
+  /* Full-file source listings: black-bordered box, filename bar, line numbers */
+  .code-block {
+    border: 2px solid #000;
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 18px 0 26px;
+  }
+  .code-block-title {
+    background: #000;
+    color: #fff;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 0.85em;
+    padding: 8px 16px;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .code-block-title .role { color: #9ad1ff; font-weight: 600; }
+  .code-block .pyhl { margin: 0; font-size: 0.82em; }
+  .code-block .pyhl pre { margin: 0; border-radius: 0; padding: 14px 16px; }
+  .code-block .pyhltable { width: 100%; border-collapse: collapse; }
+  .code-block .linenos {
+    color: #75715E;
+    text-align: right;
+    user-select: none;
+    border-right: 1px solid #49483E;
+    vertical-align: top;
+    width: 1%;
+  }
+  .code-block .linenos pre { color: #75715E; padding-right: 12px; }
+  .code-block td.code { width: 100%; vertical-align: top; }
+  .code-block td.code pre { overflow-x: auto; }
+  .code-block .plain-code {
+    margin: 0;
+    padding: 14px 16px;
+    background: #272822;
+    color: #F8F8F2;
+    font-size: 0.82em;
+    overflow-x: auto;
+  }
+  .code-block .plain-code .ln {
+    display: inline-block;
+    width: 2.4em;
+    color: #75715E;
+    user-select: none;
+  }
+
+  /* Line-by-line deep dive callouts */
+  .deepdive {
+    background: #eef2ff;
+    border: 1px solid #c7d2fe;
+    border-radius: 6px;
+    padding: 16px 20px;
+    margin: 16px 0 26px;
+  }
+  .deepdive h4 {
+    margin-top: 0;
+    text-decoration: none;
+    color: #3730a3;
+  }
+  .deepdive dl { margin: 8px 0 0; }
+  .deepdive dt {
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-weight: 700;
+    background: #fff;
+    border: 1px solid #c7d2fe;
+    border-radius: 4px;
+    padding: 1px 7px;
+    display: inline-block;
+    margin-top: 10px;
+    font-size: 0.85em;
+  }
+  .deepdive dd { margin: 4px 0 0 0; }
+  .interview {
+    background: #fff7ed;
+    border-left: 4px solid #f97316;
+    padding: 10px 14px;
+    margin: 12px 0;
+  }
+  .interview strong.q { color: #9a3412; }
+</style>
+</head>
+<body>
+
+<h1 id="top">Features</h1>
+<p>Master doc for the Enterprise RAG pipeline: a vendor risk &amp; compliance assistant for OpsVault (fictional). Steps S1–S15 follow the reference PDF <em>15 Steps in Building Enterprise-Grade AI Agents</em>; S16–S21 are added. Steps are listed in build order and numbered to match <code>checklist.csv</code>. "+F<i>n</i>" marks a feature reused from <code>restaurant-ai-platform</code>.</p>
+
+<h2 id="contents">Table of Contents</h2>
+<ul class="section-index">
+  <li class="section-index-phase">Phase 1 — Ingestion & Indexing (offline, once per doc update)</li>
+  <li><a href="#s1">S1 — Data Sources</a> <em>(Done)</em></li>
+  <li><a href="#s2">S2 — Document Loading</a></li>
+  <li><a href="#s3">S3 — Meaningful Chunking</a></li>
+  <li><a href="#s14">S14 — Semantic / Recursive Chunking</a></li>
+  <li><a href="#s4">S4 — Metadata Extraction</a></li>
+  <li><a href="#s5">S5 — Security &amp; PII Sanitization</a></li>
+  <li><a href="#s6">S6 — Embeddings</a> <em>(+F2)</em></li>
+  <li><a href="#s7">S7 — Vector Database</a> <em>(+F3)</em></li>
+  <li class="section-index-phase">Phase 2 — Pre-retrieval (every query)</li>
+  <li><a href="#s8">S8 — Query Rewriting</a></li>
+  <li class="section-index-phase">Phase 3 — Retrieval</li>
+  <li><a href="#s9">S9 — Hybrid Search (BM25 + Vector)</a></li>
+  <li class="section-index-phase">Phase 4 — Post-retrieval</li>
+  <li><a href="#s10">S10 — Reranking</a></li>
+  <li><a href="#s11">S11 — Context Assembly</a></li>
+  <li class="section-index-phase">Phase 5 — Generation (milestone: working RAG demo)</li>
+  <li><a href="#s12">S12 — LLM Generation</a></li>
+  <li class="section-index-phase">Phase 6 — Evaluation &amp; Observability</li>
+  <li><a href="#s13">S13 — Evaluation</a></li>
+  <li><a href="#s15">S15 — Advanced Evaluation &amp; Observability</a> <em>(+F6, F11)</em></li>
+  <li class="section-index-phase">Phase 7 — Serving (not in the PDF)</li>
+  <li><a href="#s16">S16 — Web Interfaces (FastAPI + Gradio / Streamlit)</a></li>
+  <li class="section-index-phase">Phase 8 — Agentic RAG &amp; Production Hardening (not in the PDF)</li>
+  <li><a href="#s17">S17 — Agentic RAG (LangGraph)</a> <em>(+F13, F16)</em></li>
+  <li><a href="#s18">S18 — Prompt-Injection Defense (Deferred)</a> <em>(+F22)</em></li>
+  <li><a href="#s19">S19 — Guardrails (Deferred)</a> <em>(+F19)</em></li>
+  <li><a href="#s20">S20 — CI Eval Gate (Deferred)</a> <em>(+F20)</em></li>
+  <li><a href="#s21">S21 — API Auth &amp; RBAC (Deferred)</a> <em>(+F21)</em></li>
+</ul>
+
+<nav class="toc" id="toc">
+  <span class="toc-phase-label">Phase 1 — Ingestion & Indexing (offline, once per doc update)</span>
+  <a href="#s1">Data Sources (S1)</a>
+  <a href="#s2">Document Loading (S2)</a>
+  <a href="#s3">Meaningful Chunking (S3)</a>
+  <a href="#s14">Semantic / Recursive Chunking (S14)</a>
+  <a href="#s4">Metadata Extraction (S4)</a>
+  <a href="#s5">Security &amp; PII Sanitization (S5)</a>
+  <a href="#s6">Embeddings (S6)</a>
+  <a href="#s7">Vector Database (S7)</a>
+  <span class="toc-phase-label">Phase 2 — Pre-retrieval (every query)</span>
+  <a href="#s8">Query Rewriting (S8)</a>
+  <span class="toc-phase-label">Phase 3 — Retrieval</span>
+  <a href="#s9">Hybrid Search (BM25 + Vector) (S9)</a>
+  <span class="toc-phase-label">Phase 4 — Post-retrieval</span>
+  <a href="#s10">Reranking (S10)</a>
+  <a href="#s11">Context Assembly (S11)</a>
+  <span class="toc-phase-label">Phase 5 — Generation (milestone: working RAG demo)</span>
+  <a href="#s12">LLM Generation (S12)</a>
+  <span class="toc-phase-label">Phase 6 — Evaluation &amp; Observability</span>
+  <a href="#s13">Evaluation (S13)</a>
+  <a href="#s15">Advanced Evaluation &amp; Observability (S15)</a>
+  <span class="toc-phase-label">Phase 7 — Serving (not in the PDF)</span>
+  <a href="#s16">Web Interfaces (FastAPI + Gradio / Streamlit) (S16)</a>
+  <span class="toc-phase-label">Phase 8 — Agentic RAG &amp; Production Hardening (not in the PDF)</span>
+  <a href="#s17">Agentic RAG (LangGraph) (S17)</a>
+  <a href="#s18">Prompt-Injection Defense (Deferred) (S18)</a>
+  <a href="#s19">Guardrails (Deferred) (S19)</a>
+  <a href="#s20">CI Eval Gate (Deferred) (S20)</a>
+  <a href="#s21">API Auth &amp; RBAC (Deferred) (S21)</a>
+</nav>
+
+<h1 class="phase-header"><span class="phase-title"><span class="phase-num">Phase 1</span>Ingestion & Indexing</span></h1>
+
+<h2 id="s1">S1 — Data Sources <a class="h2-top" href="#top" title="Back to top">↑ top</a></h2>
+
+<p class="f-toc">
+Jump to:
+<a href="#s1-1">S1:1 Data Sources</a> ·
+<a href="#s1-2">S1:2 Architecture Summary</a> ·
+<a href="#s1-3">S1:3 Integration Guide</a> ·
+<a href="#s1-4">S1:4 Testing Guide</a> ·
+<a href="#s1-5">S1:5 Source Reference (company profile)</a> ·
+<a href="#s1-6">S1:6 Source Reference (use case)</a> ·
+<a href="#s1-7">S1:7 Document-by-Document Walkthrough</a> ·
+<a href="#s1-8">S1:8 Technical Deep Dive</a> ·
+<a href="#s1-sysdesign">S1:9 System Design</a>
+</p>
+
+<div class="note">
+<strong>Status: Implemented.</strong> The corpus for the active use case, Vendor Risk &amp; Compliance, is in
+place: 11 PDFs across 6 document-type folders in <code>data/vendor-risk-compliance/raw/</code>. Every later step
+reads from here. All documents are synthetic and belong to a fictional company, OpsVault. Unlike the PDF's Step 1,
+which only says "gather PDFs, docs, and websites", this corpus is curated: the documents reference each other,
+contain personal data for S5 to redact, and contain 8 compliance gaps that serve as an answer key for S13.</div>
+
+<p>Maps to <code>checklist.csv</code> row S1, "Data Sources".</p>
+
+<table class="blog-box">
+<tr><td>
+
+<p class="back-to-top"><a href="#s1">↑ Back to S1</a></p>
+<h3 id="s1-1">S1:1 Data Sources: The Business, the Company, and the Documents</h3>
+
+<h4>The Business: Third-Party Risk Management (TPRM)</h4>
+<p>Before a company lets a vendor touch its data, procurement, security, and GRC (governance, risk &amp;
+compliance) teams read the vendor's contract and its SOC 2 audit report and check both against the company's own
+security policy. It's slow, manual, and high-stakes: one missed clause can mean customer data used to train
+someone else's AI model, or a breach the company hears about days too late. This product is a RAG assistant that
+does that review with cited answers, in two directions:</p>
+<ul>
+  <li><strong>Inbound (vendor review):</strong> "Is this vendor safe?" Check a vendor's MSA and SOC 2 report against our policy and flag gaps.</li>
+  <li><strong>Outbound (security questionnaires):</strong> "Prove we're safe." Answer a customer's security questionnaire with citations from our own policies.</li>
+</ul>
+<p>It's used by procurement, security, GRC, legal, and sales teams. Not legal advice.</p>
+
+<h4>The Company: OpsVault (fictional)</h4>
+<p><strong>What OpsVault does:</strong> it's a cloud enterprise workflow platform: one platform that runs a
+company's IT, HR, customer service, risk, finance, and supply-chain work, with AI agents built in. Customers buy
+ready-made products (SaaS) or build their own apps on the OpsVault Platform (PaaS).</p>
+<p><strong>What OpsVault sells:</strong></p>
+<table class="cost-table">
+  <tr><th>Area</th><th>Products</th></tr>
+  <tr><td>Platform &amp; AI</td><td>OpsVault Platform (low-code, workflow engine, APIs), OpsVault AI (assistants and agents), App Builder</td></tr>
+  <tr><td>IT &amp; Security</td><td>IT Service (incidents, changes, requests), IT Operations (CMDB, monitoring, AIOps), Security Ops</td></tr>
+  <tr><td>Risk</td><td><strong>Risk &amp; Compliance</strong> (policies, audits, vendor risk): this assistant's home</td></tr>
+  <tr><td>People &amp; Customers</td><td>HR Service, Customer Service, CRM</td></tr>
+  <tr><td>Finance &amp; Supply Chain</td><td>Finance Ops (invoices, close, spend), <strong>Supply Chain</strong> (supplier onboarding, source-to-pay): this assistant's second home, ERP Connect (SAP, Oracle, NetSuite sync)</td></tr>
+</table>
+<p><strong>How OpsVault works:</strong> it follows a <strong>Customer Zero</strong> approach. Its own teams use a
+product first, then it's sold to customers. This assistant follows the same path: OpsVault's GRC team reviews its
+own vendors with it first, then it ships as an OpsVault AI skill inside Risk &amp; Compliance.</p>
+<p><strong>Compliance:</strong> OpsVault holds a SOC 2 Type II report (Security, Availability, Confidentiality).
+SOX applies to finance vendors and PCI DSS wherever card data is involved. It does not hold HIPAA attestation or
+ISO 27001.</p>
+
+<h4>Who's in the Documents</h4>
+<table class="cost-table">
+  <tr><th>Party</th><th>Role</th></tr>
+  <tr><td>OpsVault, Inc.</td><td>Our company, doing the review</td></tr>
+  <tr><td>Stratocore Cloud, Inc.</td><td>Critical vendor: cloud hosting for the OpsVault Platform</td></tr>
+  <tr><td>Cortexa AI, Inc.</td><td>Critical vendor: AI model APIs behind OpsVault AI</td></tr>
+  <tr><td>Harborline Logistics LLC</td><td>Prospective partner for an OpsVault Supply Chain integration</td></tr>
+  <tr><td>Brightwater Health Systems</td><td>OpsVault customer sending a security questionnaire</td></tr>
+</table>
+
+<h4>The Documents: 11 PDFs, 6 Types</h4>
+<table class="cost-table">
+  <tr><th>Folder</th><th>Document</th><th>What it's for</th></tr>
+  <tr><td><code>policy/</code></td><td>OpsVault Information Security &amp; Vendor Management Policy (POL-SEC-007)</td><td>The rules every vendor is checked against: VM-1 to VM-8 and AC-1 to AC-4</td></tr>
+  <tr><td><code>policy/</code></td><td>OpsVault SOC 2 Control Framework, excerpt (POL-GRC-002)</td><td>Maps SOC 2 criteria (CC6.1, CC7.4, …) to OpsVault controls; the source for outbound answers</td></tr>
+  <tr><td><code>msa/</code></td><td>Stratocore Cloud MSA (MSA-2025-014)</td><td>Hosting contract: encryption, incident notice, audit rights, liability</td></tr>
+  <tr><td><code>msa/</code></td><td>Cortexa AI MSA (MSA-2025-021)</td><td>AI vendor contract: data use, model training, retention</td></tr>
+  <tr><td><code>sow/</code></td><td>SOW-014-01 Region Migration; SOW-014-02 Backup &amp; DR</td><td>Project work under the Stratocore MSA; SOW-02 overrides one MSA clause</td></tr>
+  <tr><td><code>nda/</code></td><td>Stratocore mutual NDA; Harborline NDA with non-solicitation</td><td>Confidentiality terms; the Stratocore NDA is cited by its MSA</td></tr>
+  <tr><td><code>audit-report/</code></td><td>Stratocore SOC 2 Type II; Cortexa SOC 2 Type I (both marked SYNTHETIC)</td><td>Evidence of what each vendor actually does, including exceptions</td></tr>
+  <tr><td><code>questionnaire/</code></td><td>Brightwater Health security questionnaire (14 questions)</td><td>Outbound use: questions OpsVault must answer from its own documents</td></tr>
+</table>
+<p class="tags"><strong>Tags:</strong> Corpus Curation, Synthetic Data, TPRM, SOC 2, Data Sources, S1</p>
+
+<p class="back-to-top"><a href="#s1">↑ Back to S1</a></p>
+<h3 id="s1-2">S1:2 Architecture Summary: One Folder per Use Case</h3>
+<pre class="cmd"><code>company/vendor-risk-compliance/opsvault.md     who OpsVault is
+use-cases/vendor-risk-compliance.md            what the assistant does for OpsVault
+data/vendor-risk-compliance/                   (gitignored)
+├── raw/                    the 11 source PDFs, read by S2
+│   ├── policy/  msa/  sow/  nda/  audit-report/  questionnaire/
+└── index/                  FAISS index, filled by S7</code></pre>
+<ul>
+  <li><strong>One data folder per use case.</strong> A future use case gets <code>data/&lt;its-name&gt;/</code> and never mixes with these documents or this index.</li>
+  <li><strong>The folder name is a label.</strong> S4 can tag each chunk's document type from its folder (<code>msa</code>, <code>sow</code>, …).</li>
+  <li><strong>Originals are never changed.</strong> Later steps redact and label chunks in memory; <code>raw/</code> stays the untouched record.</li>
+  <li><strong>Documents stay out of git.</strong> <code>data/</code> is gitignored, so company documents never reach the repo.</li>
+</ul>
+
+<p class="back-to-top"><a href="#s1">↑ Back to S1</a></p>
+<h3 id="s1-3">S1:3 Integration Guide: What Actually Got Touched</h3>
+<table class="cost-table">
+  <tr><th>File</th><th>Change</th></tr>
+  <tr><td><code>data/vendor-risk-compliance/raw/</code></td><td>New: 11 PDFs in 6 folders (gitignored)</td></tr>
+  <tr><td><code>company/vendor-risk-compliance/opsvault.md</code></td><td>New: company profile</td></tr>
+  <tr><td><code>use-cases/vendor-risk-compliance.md</code></td><td>Rewritten: two stages, two directions, folder layout</td></tr>
+  <tr><td><code>.gitignore</code></td><td><code>data/raw/</code> widened to <code>data/</code></td></tr>
+  <tr><td><code>checklist.csv</code> / <code>checklist.html</code>, <code>README.md</code>, <code>features.html</code></td><td>S1 marked Done and documented</td></tr>
+</table>
+
+<h3 class="hl-title" id="s1-4">S1:4 Testing Guide: How to Verify Data Sources (S1)</h3>
+<p><strong class="hl-title">1) Confirm all 11 PDFs are in place</strong></p>
+<pre class="cmd"><code>find data/vendor-risk-compliance/raw -name '*.pdf' | sort</code></pre>
+<pre class="cmd"><code>data/vendor-risk-compliance/raw/audit-report/cortexa-soc2-type1.pdf
+data/vendor-risk-compliance/raw/audit-report/stratocore-soc2-type2.pdf
+data/vendor-risk-compliance/raw/msa/cortexa-ai-msa.pdf
+data/vendor-risk-compliance/raw/msa/stratocore-cloud-msa.pdf
+data/vendor-risk-compliance/raw/nda/harborline-logistics-nda.pdf
+data/vendor-risk-compliance/raw/nda/stratocore-mutual-nda.pdf
+data/vendor-risk-compliance/raw/policy/opsvault-security-vendor-policy.pdf
+data/vendor-risk-compliance/raw/policy/opsvault-soc2-control-framework.pdf
+data/vendor-risk-compliance/raw/questionnaire/brightwater-security-questionnaire.pdf
+data/vendor-risk-compliance/raw/sow/stratocore-sow-01-region-migration.pdf
+data/vendor-risk-compliance/raw/sow/stratocore-sow-02-backup-dr.pdf</code></pre>
+
+<p><strong class="hl-title">2) Confirm every PDF extracts as text</strong> — this is what S2 will see. Page and word counts from <code>pypdf</code>:</p>
+<pre class="cmd"><code>2p   615w  audit-report/cortexa-soc2-type1.pdf
+3p   766w  audit-report/stratocore-soc2-type2.pdf
+3p   739w  msa/cortexa-ai-msa.pdf
+3p   904w  msa/stratocore-cloud-msa.pdf
+2p   393w  nda/harborline-logistics-nda.pdf
+2p   444w  nda/stratocore-mutual-nda.pdf
+3p   735w  policy/opsvault-security-vendor-policy.pdf
+3p   590w  policy/opsvault-soc2-control-framework.pdf
+2p   315w  questionnaire/brightwater-security-questionnaire.pdf
+2p   440w  sow/stratocore-sow-01-region-migration.pdf
+2p   399w  sow/stratocore-sow-02-backup-dr.pdf</code></pre>
+
+<p><strong class="hl-title">3) Spot-check the cross-references</strong> — open the two SOWs and confirm both cite
+<code>MSA-2025-014</code>, and open the Stratocore SOC 2 and confirm it covers the vendor named in that MSA.</p>
+
+<p class="back-to-top"><a href="#s1">↑ Back to S1</a></p>
+<h3 id="s1-5">S1:5 Source Reference: company/vendor-risk-compliance/opsvault.md — full file</h3>
+<div class="code-block">
+<div class="code-block-title"><span>company/vendor-risk-compliance/opsvault.md</span><span class="role">What OpsVault does, sells, and buys (S1) — 48 lines</span></div>
+<pre class="plain-code"><code><span class="ln">  1</span>  # Company: OpsVault (fictional)
+<span class="ln">  2</span>  
+<span class="ln">  3</span>  **OpsVault is a fictional company** created for this portfolio project. It&#x27;s modeled on
+<span class="ln">  4</span>  cloud enterprise workflow platforms: one platform that runs a company&#x27;s IT, HR, customer service,
+<span class="ln">  5</span>  risk, finance, and supply-chain workflows, with AI agents built in. It isn&#x27;t affiliated with or based
+<span class="ln">  6</span>  on any real company&#x27;s internal documents. Every OpsVault policy, contract, and audit report in `data/` is synthetic.
+<span class="ln">  7</span>  
+<span class="ln">  8</span>  ## Overview
+<span class="ln">  9</span>  OpsVault is a SaaS company that sells workflow automation and AI on its own platform. Customers buy
+<span class="ln"> 10</span>  ready-made products (SaaS) or build their own apps on the OpsVault Platform (PaaS).
+<span class="ln"> 11</span>  
+<span class="ln"> 12</span>  **Customer Zero:** OpsVault runs every product internally first, then sells what worked. This RAG
+<span class="ln"> 13</span>  system follows the same path: OpsVault&#x27;s own teams use it first, then it ships to customers.
+<span class="ln"> 14</span>  
+<span class="ln"> 15</span>  ## Products
+<span class="ln"> 16</span>  
+<span class="ln"> 17</span>  | Product | What it does |
+<span class="ln"> 18</span>  |---|---|
+<span class="ln"> 19</span>  | OpsVault Platform | Low-code platform, workflow engine, database, APIs (incl. a Table API) |
+<span class="ln"> 20</span>  | OpsVault AI | Generative AI assistants and AI agents built into every product |
+<span class="ln"> 21</span>  | OpsVault IT Service | Incidents, changes, and service requests |
+<span class="ln"> 22</span>  | OpsVault IT Operations | Asset inventory (CMDB), monitoring, AIOps |
+<span class="ln"> 23</span>  | OpsVault Security Ops | Security incidents and vulnerability response |
+<span class="ln"> 24</span>  | OpsVault Risk &amp; Compliance | Policies, audits, and **vendor risk** (this system&#x27;s home) |
+<span class="ln"> 25</span>  | OpsVault HR Service | Employee requests and onboarding |
+<span class="ln"> 26</span>  | OpsVault Customer Service | Customer cases and field service |
+<span class="ln"> 27</span>  | OpsVault App Builder | Customers build their own apps |
+<span class="ln"> 28</span>  | OpsVault Finance Ops | Invoices, accounts payable, month-end close, spend approvals |
+<span class="ln"> 29</span>  | OpsVault Supply Chain | Supplier onboarding, purchase orders, source-to-pay (this system&#x27;s second home) |
+<span class="ln"> 30</span>  | OpsVault CRM | Sales, quotes, orders, customer accounts |
+<span class="ln"> 31</span>  | OpsVault ERP Connect | Two-way sync with SAP, Oracle, and NetSuite without copying data |
+<span class="ln"> 32</span>  
+<span class="ln"> 33</span>  ## Key vendors
+<span class="ln"> 34</span>  | Vendor type | Why it matters | Showcase clause |
+<span class="ln"> 35</span>  |---|---|---|
+<span class="ln"> 36</span>  | Cloud hosting provider | Runs the OpsVault Platform | Encryption at rest |
+<span class="ln"> 37</span>  | AI model provider | Powers OpsVault AI | No training on customer data |
+<span class="ln"> 38</span>  | Payments / ERP provider (optional) | Touches financial data | SOX and PCI controls |
+<span class="ln"> 39</span>  | Logistics / supplier network (optional) | Supply chain | Right to audit |
+<span class="ln"> 40</span>  
+<span class="ln"> 41</span>  ## Compliance
+<span class="ln"> 42</span>  - **SOC 2 Type II**, the primary framework (control IDs like `CC6.1`, `CC7.2`, `CC8.1`).
+<span class="ln"> 43</span>  - **SOX** for finance-related vendors and controls.
+<span class="ln"> 44</span>  - **PCI DSS** wherever payment card data is involved.
+<span class="ln"> 45</span>  
+<span class="ln"> 46</span>  ## Who uses the RAG system
+<span class="ln"> 47</span>  Procurement, security, GRC (governance, risk &amp; compliance), legal, and sales (for customer security
+<span class="ln"> 48</span>  questionnaires).</code></pre>
+</div>
+
+<p class="back-to-top"><a href="#s1">↑ Back to S1</a></p>
+<h3 id="s1-6">S1:6 Source Reference: use-cases/vendor-risk-compliance.md — full file</h3>
+<div class="code-block">
+<div class="code-block-title"><span>use-cases/vendor-risk-compliance.md</span><span class="role">What the assistant does for OpsVault (S1) — 92 lines</span></div>
+<pre class="plain-code"><code><span class="ln">  1</span>  # Use Case: Vendor Risk &amp; Compliance Assistant
+<span class="ln">  2</span>  
+<span class="ln">  3</span>  **Status:** Active use case.
+<span class="ln">  4</span>  
+<span class="ln">  5</span>  **Company:** OpsVault (fictional). See `company/vendor-risk-compliance/opsvault.md` for its products,
+<span class="ln">  6</span>  vendors, and frameworks.
+<span class="ln">  7</span>  
+<span class="ln">  8</span>  ## Business summary
+<span class="ln">  9</span>  - **What it is:** A RAG assistant for third-party risk management (TPRM), shipped as an OpsVault AI
+<span class="ln"> 10</span>    skill in OpsVault Risk &amp; Compliance (vendor risk) and OpsVault Supply Chain (supplier onboarding).
+<span class="ln"> 11</span>    It ingests, secures, indexes, and retrieves vendor contracts, vendor audit reports, and OpsVault&#x27;s
+<span class="ln"> 12</span>    own compliance policies.
+<span class="ln"> 13</span>  - **Core value:** Procurement, security, GRC, legal, and sales teams get cited answers about
+<span class="ln"> 14</span>    high-stakes contracts and compliance requirements. Governance comes from PII redaction, grounded
+<span class="ln"> 15</span>    answers, and automated evaluation guards.
+<span class="ln"> 16</span>  - **Disclaimer:** Not legal advice. The answer prompt and the README both say so.
+<span class="ln"> 17</span>  
+<span class="ln"> 18</span>  ## Two stages (Customer Zero)
+<span class="ln"> 19</span>  1. **Internal first:** OpsVault&#x27;s own teams use it to review their vendors and answer their customers.
+<span class="ln"> 20</span>  2. **Then customers:** sold to OpsVault customers inside Risk &amp; Compliance. Each gap found becomes a
+<span class="ln"> 21</span>     risk ticket (planned agent step, via a mock OpsVault Table API).
+<span class="ln"> 22</span>  
+<span class="ln"> 23</span>  ## Two directions
+<span class="ln"> 24</span>  - **Inbound (vendor review):** &quot;Is this vendor safe?&quot; Check a vendor&#x27;s MSA and SOC 2 report against
+<span class="ln"> 25</span>    OpsVault&#x27;s policy and flag gaps.
+<span class="ln"> 26</span>  - **Outbound (security questionnaires):** &quot;Prove we&#x27;re safe.&quot; Answer customers&#x27; security
+<span class="ln"> 27</span>    questionnaires with citations from OpsVault&#x27;s own policies and SOC 2 report.
+<span class="ln"> 28</span>  
+<span class="ln"> 29</span>  ## Source documents (`data/vendor-risk-compliance/raw/`, gitignored)
+<span class="ln"> 30</span>  
+<span class="ln"> 31</span>  All synthetic for now, written as OpsVault documents. Real CUAD contracts can be swapped in later
+<span class="ln"> 32</span>  before the labeled evals (CUAD has no NDAs).
+<span class="ln"> 33</span>  
+<span class="ln"> 34</span>  | Folder | Type | Count | Notes |
+<span class="ln"> 35</span>  |---|---|---|---|
+<span class="ln"> 36</span>  | `msa/` | Master Services Agreements | 2 | Two key vendors (e.g. cloud hosting, AI model provider) |
+<span class="ln"> 37</span>  | `nda/` | Non-Disclosure Agreements | 2 | |
+<span class="ln"> 38</span>  | `sow/` | Statements of Work | 2 | Both reference one of the MSAs |
+<span class="ln"> 39</span>  | `policy/` | Compliance framework &amp; policy | 2 | SOC 2-aligned framework excerpt + OpsVault&#x27;s security policy |
+<span class="ln"> 40</span>  | `audit-report/` | Vendor SOC 2 audit reports | 2 | **Synthetic**, labeled as such; one covers a vendor named in an MSA |
+<span class="ln"> 41</span>  | `questionnaire/` | Customer security questionnaires | 1-2 | For the outbound direction |
+<span class="ln"> 42</span>  
+<span class="ln"> 43</span>  Link the docs together so cross-document questions work. Both SOWs reference one MSA, and at least
+<span class="ln"> 44</span>  one audit report covers a vendor named in a contract. Plant realistic PII so S5 has something to catch.
+<span class="ln"> 45</span>  
+<span class="ln"> 46</span>  ## PII protection (three layers)
+<span class="ln"> 47</span>  **Redact people, not companies.**
+<span class="ln"> 48</span>  - **Personal data of any individual** (customer, employee, signatory, auditor, notice contact): names,
+<span class="ln"> 49</span>    signatures, emails, phone numbers, home addresses, government IDs.
+<span class="ln"> 50</span>  - **Secrets and financial data:** bank account and routing numbers, payment card numbers, API keys,
+<span class="ln"> 51</span>    passwords.
+<span class="ln"> 52</span>  - **Keep:** vendor, company, and contract-party names, business addresses, and contract terms, so
+<span class="ln"> 53</span>    metadata (S4) and questions like &quot;the cloud vendor&#x27;s MSA&quot; still work.
+<span class="ln"> 54</span>  
+<span class="ln"> 55</span>  **How:**
+<span class="ln"> 56</span>  - **Typed placeholders, not blanks:** `[PERSON_1]`, `[EMAIL_2]`, `[BANK_ACCOUNT_1]`, numbered per
+<span class="ln"> 57</span>    document so answers stay readable (&quot;signed by [PERSON_1]&quot;).
+<span class="ln"> 58</span>  - **Detection:** Microsoft Presidio (NER) for names, locations, and IDs, plus regex for card numbers,
+<span class="ln"> 59</span>    bank numbers, and keys.
+<span class="ln"> 60</span>  - **Redaction log:** per chunk, record the entity type and count, never the original value. This is the
+<span class="ln"> 61</span>    audit trail.
+<span class="ln"> 62</span>  
+<span class="ln"> 63</span>  **Layers:**
+<span class="ln"> 64</span>  1. **Ingestion (S5):** redact before embedding or storage.
+<span class="ln"> 65</span>  2. **Query (S8):** redact the user&#x27;s question before it reaches the LLM.
+<span class="ln"> 66</span>  3. **Answer (S12):** check the final answer before returning it.
+<span class="ln"> 67</span>  
+<span class="ln"> 68</span>  ## How each step applies
+<span class="ln"> 69</span>  
+<span class="ln"> 70</span>  | Step | Use in this business |
+<span class="ln"> 71</span>  |---|---|
+<span class="ln"> 72</span>  | S1–S2 | Load the 10 PDFs |
+<span class="ln"> 73</span>  | S3, S14 | Chunk by clause and section so clauses aren&#x27;t split |
+<span class="ln"> 74</span>  | S4 | Metadata: doc type, vendor, parties, effective date, framework |
+<span class="ln"> 75</span>  | S5 | PII and secrets redaction at ingestion (Presidio + regex, typed placeholders, redaction log) |
+<span class="ln"> 76</span>  | S6–S7 | Embeddings + FAISS |
+<span class="ln"> 77</span>  | S8 | Query rewriting + query-side redaction |
+<span class="ln"> 78</span>  | S9 | Hybrid search: BM25 catches &quot;Section 8.2&quot;, control IDs like &quot;CC6.1&quot;, dollar caps |
+<span class="ln"> 79</span>  | S10 | Cross-encoder reranking puts the exact clause first |
+<span class="ln"> 80</span>  | S11–S12 | Answers cite the doc and clause; answer-side redaction check |
+<span class="ln"> 81</span>  | S13, S15 | Faithfulness evals + LangSmith tracing (audit trail) |
+<span class="ln"> 82</span>  | S16 | Gradio / Streamlit demo UIs |
+<span class="ln"> 83</span>  
+<span class="ln"> 84</span>  ## Demo questions
+<span class="ln"> 85</span>  Vendor names are placeholders until the documents are written.
+<span class="ln"> 86</span>  - &quot;What&#x27;s the liability cap in the cloud hosting vendor&#x27;s MSA?&quot; (single contract, exact number)
+<span class="ln"> 87</span>  - &quot;Which SOWs fall under that MSA?&quot; (metadata / cross-reference)
+<span class="ln"> 88</span>  - &quot;What does OpsVault&#x27;s policy require for access reviews?&quot; (internal policy)
+<span class="ln"> 89</span>  - &quot;Does the AI model provider&#x27;s contract forbid training on OpsVault customer data?&quot; (current AI risk)
+<span class="ln"> 90</span>  - &quot;The cloud vendor&#x27;s MSA requires encryption at rest. Does their SOC 2 report confirm it, and does that
+<span class="ln"> 91</span>    meet OpsVault&#x27;s policy?&quot; (cross-document, the showcase question)
+<span class="ln"> 92</span>  - &quot;A customer asks: do you encrypt data at rest? Answer from our SOC 2 and policy.&quot; (outbound)</code></pre>
+</div>
+
+<p class="back-to-top"><a href="#s1">↑ Back to S1</a></p>
+<h3 id="s1-7">S1:7 Document-by-Document Walkthrough: How the Corpus Fits Together</h3>
+<ul>
+  <li><strong>Start with the policy.</strong> POL-SEC-007 is the yardstick. It defines a Critical Vendor (anyone touching Customer Data) and the eight vendor rules: SOC 2 Type II (VM-1), AES-256 at rest with yearly key rotation (VM-2), TLS 1.2+ (VM-3), 48-hour incident notice (VM-4), no AI training on customer data even if de-identified (VM-5), 30-day deletion (VM-6), a 2x-fees breach cap (VM-7), and a yearly audit right (VM-8).</li>
+  <li><strong>The framework connects policy to SOC 2.</strong> POL-GRC-002 maps criteria like CC6.1 and CC7.4 to OpsVault controls, and lists the customer-facing commitments that outbound answers may use.</li>
+  <li><strong>Stratocore is the "mostly good" vendor.</strong> Its MSA meets the policy on paper. Its NDA came first and is cited by the MSA. Its two SOWs both point back to MSA-2025-014. Its SOC 2 Type II is clean except for one key-rotation exception.</li>
+  <li><strong>Cortexa is the "risky" vendor.</strong> Its MSA looks fine at §5.3 ("no model training") but §5.4 allows training on de-identified usage data. Its notice window, liability cap, and audit rights all fall short, and it only has a Type I report.</li>
+  <li><strong>Harborline is a different kind of NDA.</strong> It adds non-solicitation and a rule for shipment personal data, so not every NDA question has the same answer.</li>
+  <li><strong>The questionnaire flips the direction.</strong> Brightwater asks OpsVault to prove its own controls, including two questions (HIPAA, ISO 27001) whose honest answer is "No".</li>
+</ul>
+
+<p class="back-to-top"><a href="#s1">↑ Back to S1</a></p>
+<h3 id="s1-8">S1:8 Technical Deep Dive: What This Corpus Tests, and What It Doesn't</h3>
+<h4>Compliance gaps in the documents (the answer key for S13)</h4>
+<table class="cost-table">
+  <tr><th>#</th><th>Gap</th><th>Documents</th><th>Policy rule</th></tr>
+  <tr><td>1</td><td>Stratocore's MSA requires key rotation every 12 months; its SOC 2 shows 2 of 25 keys at 14 and 16 months (qualified opinion)</td><td>MSA §7.2, SOC 2 SC-ENC-02</td><td>VM-2</td></tr>
+  <tr><td>2</td><td>Cortexa provides only a SOC 2 Type I</td><td>Cortexa SOC 2</td><td>VM-1</td></tr>
+  <tr><td>3</td><td>Cortexa may use "aggregated and de-identified" usage data to improve its models</td><td>Cortexa MSA §5.4</td><td>VM-5</td></tr>
+  <tr><td>4</td><td>Cortexa notifies within 72 hours, not 48</td><td>Cortexa MSA §7</td><td>VM-4</td></tr>
+  <tr><td>5</td><td>Cortexa's liability is capped at 12 months of fees with no data-breach super cap</td><td>Cortexa MSA §10</td><td>VM-7</td></tr>
+  <tr><td>6</td><td>Cortexa allows no on-site audit, reviews access semi-annually, rotates keys every 24 months</td><td>Cortexa MSA §8, SOC 2</td><td>VM-8, AC-3, VM-2</td></tr>
+  <tr><td>7</td><td>SOW-02 overrides the MSA so backups are kept 35 days</td><td>SOW-014-02 §3</td><td>VM-6</td></tr>
+  <tr><td>8</td><td>The questionnaire asks about HIPAA and ISO 27001, which OpsVault doesn't have; the right answer is "No", not a guess</td><td>Questionnaire A2–A3, POL-GRC-002 §5</td><td>n/a</td></tr>
+</table>
+
+<h4>Personal data and secrets in the documents (for S5)</h4>
+<p>Signers' and contacts' names, work emails, phone numbers, bank routing and account numbers, a leaked API key
+in SOW-02, a test card number, and auditor and interviewee names. All emails use reserved <code>.example</code>
+domains and all phone numbers use the 555 range. Company names and business addresses stay, because the
+redaction rule is "people, not companies".</p>
+
+<h4>What it doesn't cover</h4>
+<ul>
+  <li><strong>Clean layouts.</strong> Real contracts have scanned pages, long definitions sections, and broken layouts. These PDFs are clean, so they don't stress S2 the way real files would. Adding CUAD contracts later fixes this.</li>
+  <li><strong>No labels yet.</strong> The gap table is an answer key for a handful of checks, not a labeled dataset; recall@k needs a proper question set.</li>
+  <li><strong>Tables flatten.</strong> When extracted, a table comes out as one cell per line. That's realistic, and S2/S3 must handle it.</li>
+  <li><strong>Footer noise.</strong> Every page carries a "synthetic document" footer; S2's cleaning should strip it.</li>
+</ul>
+<p class="tags"><strong>Tags:</strong> Synthetic Data, Answer Key, PII Test Fixtures, SOC 2, S1</p>
+
+<p class="back-to-top"><a href="#s1">↑ Back to S1</a></p>
+<h3 id="s1-sysdesign">S1:9 System Design <a class="h3-up" href="#s1" title="Back to S1">↑ S1</a></h3>
+<p>Talking points for a system-design discussion.</p>
+<ul>
+  <li><strong>Data:</strong> "What datasets would you use?" A curated synthetic corpus first, so every demo question and gap has a known answer; CUAD's lawyer-labeled contracts next, for realism and recall metrics.</li>
+  <li><strong>Governance:</strong> the originals are never modified; every page says it's synthetic; company documents never enter git.</li>
+  <li><strong>Systems design:</strong> one folder per use case means the pipeline is business-agnostic. A new domain is a new folder and use-case file, not a code change.</li>
+  <li><strong>Evals:</strong> the 8 gaps give S13 something concrete to check before any labeled dataset exists.</li>
+</ul>
+
+<p><strong>Trade-offs:</strong></p>
+<table class="cost-table">
+  <tr><th>Decision</th><th>Pros</th><th>Cons</th><th>Alternative / when to switch</th></tr>
+  <tr><td>Synthetic documents</td><td>Every clause, cross-reference, gap, and PII item is known; no licensing</td><td>Too clean; weaker "what dataset?" answer</td><td>Add CUAD contracts before building recall metrics</td></tr>
+  <tr><td>Ignore all of <code>data/</code></td><td>Real company documents can never leak into git</td><td>Documents must be shared outside the repo</td><td>Keep for real documents; a <code>samples/</code> folder could hold public test files</td></tr>
+  <tr><td>Fictional company and vendors</td><td>No real company's documents imitated</td><td>Less recognizable in a demo</td><td>Keep fictional; describe the real company type in the pitch</td></tr>
+  <tr><td>One folder per document type</td><td>Document type comes free for S4 metadata</td><td>A document of two types needs a choice</td><td>Move type into a metadata file if folders stop fitting</td></tr>
+</table>
+
+<p class="back-to-top"><a href="#s1">↑ Back to S1</a></p>
+<p class="tags"><strong>Tags:</strong> Corpus Curation, Synthetic Data, TPRM, SOC 2, PII Fixtures, S1</p>
+
+<p><strong>What was built:</strong></p>
+<ul>
+  <li>11 PDFs in <code>data/vendor-risk-compliance/raw/</code> (gitignored) across 6 folders, with 8 compliance gaps and planted personal data</li>
+  <li><code>company/vendor-risk-compliance/opsvault.md</code> — company profile: what OpsVault does, sells, and buys</li>
+  <li><code>use-cases/vendor-risk-compliance.md</code> — rewritten: two stages, two directions, folder layout, demo questions</li>
+  <li><code>checklist.csv</code> / <code>checklist.html</code> set up, with S1 marked Done</li>
+  <li>verified: all 11 PDFs present and extract as text (<code>pypdf</code>)</li>
+</ul>
+
+</td></tr>
+</table>
+
+<p class="back-to-top"><a href="#top">↑ Back to top</a></p>
+
+<h2 id="s2">S2 — Document Loading <a class="h2-top" href="#top" title="Back to top">↑ top</a></h2>
+
+<p class="f-toc">
+Jump to:
+<a href="#s2-1">S2:1 Document Loading: TBA</a> ·
+<a href="#s2-2">S2:2 Architecture Summary: TBA</a> ·
+<a href="#s2-3">S2:3 Integration Guide: TBA</a> ·
+<a href="#s2-4">S2:4 Testing Guide: TBA</a> ·
+<a href="#s2-5">S2:5 Source Code Reference: TBA</a> ·
+<a href="#s2-6">S2:6 Source Code Reference: TBA</a> ·
+<a href="#s2-7">S2:7 Line-by-Line Deep Dive: TBA</a> ·
+<a href="#s2-8">S2:8 Technical Deep Dive: TBA</a> ·
+<a href="#s2-sysdesign">S2:9 System Design: TBA</a>
+</p>
+
+<h3 id="s2-1">S2:1 Document Loading: TBA</h3>
+
+<h3 id="s2-2">S2:2 Architecture Summary: TBA</h3>
+
+<h3 id="s2-3">S2:3 Integration Guide: TBA</h3>
+
+<h3 id="s2-4">S2:4 Testing Guide: TBA</h3>
+
+<h3 id="s2-5">S2:5 Source Code Reference: TBA</h3>
+
+<h3 id="s2-6">S2:6 Source Code Reference: TBA</h3>
+
+<h3 id="s2-7">S2:7 Line-by-Line Deep Dive: TBA</h3>
+
+<h3 id="s2-8">S2:8 Technical Deep Dive: TBA</h3>
+
+<h3 id="s2-sysdesign">S2:9 System Design: TBA</h3>
+
+<p class="back-to-top"><a href="#top">↑ Back to top</a></p>
+
+<h2 id="s3">S3 — Meaningful Chunking <a class="h2-top" href="#top" title="Back to top">↑ top</a></h2>
+
+<p class="f-toc">
+Jump to:
+<a href="#s3-1">S3:1 Meaningful Chunking: TBA</a> ·
+<a href="#s3-2">S3:2 Architecture Summary: TBA</a> ·
+<a href="#s3-3">S3:3 Integration Guide: TBA</a> ·
+<a href="#s3-4">S3:4 Testing Guide: TBA</a> ·
+<a href="#s3-5">S3:5 Source Code Reference: TBA</a> ·
+<a href="#s3-6">S3:6 Source Code Reference: TBA</a> ·
+<a href="#s3-7">S3:7 Line-by-Line Deep Dive: TBA</a> ·
+<a href="#s3-8">S3:8 Technical Deep Dive: TBA</a> ·
+<a href="#s3-sysdesign">S3:9 System Design: TBA</a>
+</p>
+
+<h3 id="s3-1">S3:1 Meaningful Chunking: TBA</h3>
+
+<h3 id="s3-2">S3:2 Architecture Summary: TBA</h3>
+
+<h3 id="s3-3">S3:3 Integration Guide: TBA</h3>
+
+<h3 id="s3-4">S3:4 Testing Guide: TBA</h3>
+
+<h3 id="s3-5">S3:5 Source Code Reference: TBA</h3>
+
+<h3 id="s3-6">S3:6 Source Code Reference: TBA</h3>
+
+<h3 id="s3-7">S3:7 Line-by-Line Deep Dive: TBA</h3>
+
+<h3 id="s3-8">S3:8 Technical Deep Dive: TBA</h3>
+
+<h3 id="s3-sysdesign">S3:9 System Design: TBA</h3>
+
+<p class="back-to-top"><a href="#top">↑ Back to top</a></p>
+
+<h2 id="s14">S14 — Semantic / Recursive Chunking <a class="h2-top" href="#top" title="Back to top">↑ top</a></h2>
+
+<p class="f-toc">
+Jump to:
+<a href="#s14-1">S14:1 Semantic / Recursive Chunking: TBA</a> ·
+<a href="#s14-2">S14:2 Architecture Summary: TBA</a> ·
+<a href="#s14-3">S14:3 Integration Guide: TBA</a> ·
+<a href="#s14-4">S14:4 Testing Guide: TBA</a> ·
+<a href="#s14-5">S14:5 Source Code Reference: TBA</a> ·
+<a href="#s14-6">S14:6 Source Code Reference: TBA</a> ·
+<a href="#s14-7">S14:7 Line-by-Line Deep Dive: TBA</a> ·
+<a href="#s14-8">S14:8 Technical Deep Dive: TBA</a> ·
+<a href="#s14-sysdesign">S14:9 System Design: TBA</a>
+</p>
+
+<h3 id="s14-1">S14:1 Semantic / Recursive Chunking: TBA</h3>
+
+<h3 id="s14-2">S14:2 Architecture Summary: TBA</h3>
+
+<h3 id="s14-3">S14:3 Integration Guide: TBA</h3>
+
+<h3 id="s14-4">S14:4 Testing Guide: TBA</h3>
+
+<h3 id="s14-5">S14:5 Source Code Reference: TBA</h3>
+
+<h3 id="s14-6">S14:6 Source Code Reference: TBA</h3>
+
+<h3 id="s14-7">S14:7 Line-by-Line Deep Dive: TBA</h3>
+
+<h3 id="s14-8">S14:8 Technical Deep Dive: TBA</h3>
+
+<h3 id="s14-sysdesign">S14:9 System Design: TBA</h3>
+
+<p class="back-to-top"><a href="#top">↑ Back to top</a></p>
+
+<h2 id="s4">S4 — Metadata Extraction <a class="h2-top" href="#top" title="Back to top">↑ top</a></h2>
+
+<p class="f-toc">
+Jump to:
+<a href="#s4-1">S4:1 Metadata Extraction: TBA</a> ·
+<a href="#s4-2">S4:2 Architecture Summary: TBA</a> ·
+<a href="#s4-3">S4:3 Integration Guide: TBA</a> ·
+<a href="#s4-4">S4:4 Testing Guide: TBA</a> ·
+<a href="#s4-5">S4:5 Source Code Reference: TBA</a> ·
+<a href="#s4-6">S4:6 Source Code Reference: TBA</a> ·
+<a href="#s4-7">S4:7 Line-by-Line Deep Dive: TBA</a> ·
+<a href="#s4-8">S4:8 Technical Deep Dive: TBA</a> ·
+<a href="#s4-sysdesign">S4:9 System Design: TBA</a>
+</p>
+
+<h3 id="s4-1">S4:1 Metadata Extraction: TBA</h3>
+
+<h3 id="s4-2">S4:2 Architecture Summary: TBA</h3>
+
+<h3 id="s4-3">S4:3 Integration Guide: TBA</h3>
+
+<h3 id="s4-4">S4:4 Testing Guide: TBA</h3>
+
+<h3 id="s4-5">S4:5 Source Code Reference: TBA</h3>
+
+<h3 id="s4-6">S4:6 Source Code Reference: TBA</h3>
+
+<h3 id="s4-7">S4:7 Line-by-Line Deep Dive: TBA</h3>
+
+<h3 id="s4-8">S4:8 Technical Deep Dive: TBA</h3>
+
+<h3 id="s4-sysdesign">S4:9 System Design: TBA</h3>
+
+<p class="back-to-top"><a href="#top">↑ Back to top</a></p>
+
+<h2 id="s5">S5 — Security &amp; PII Sanitization <a class="h2-top" href="#top" title="Back to top">↑ top</a></h2>
+
+<p class="f-toc">
+Jump to:
+<a href="#s5-1">S5:1 Security &amp; PII Sanitization: TBA</a> ·
+<a href="#s5-2">S5:2 Architecture Summary: TBA</a> ·
+<a href="#s5-3">S5:3 Integration Guide: TBA</a> ·
+<a href="#s5-4">S5:4 Testing Guide: TBA</a> ·
+<a href="#s5-5">S5:5 Source Code Reference: TBA</a> ·
+<a href="#s5-6">S5:6 Source Code Reference: TBA</a> ·
+<a href="#s5-7">S5:7 Line-by-Line Deep Dive: TBA</a> ·
+<a href="#s5-8">S5:8 Technical Deep Dive: TBA</a> ·
+<a href="#s5-sysdesign">S5:9 System Design: TBA</a>
+</p>
+
+<h3 id="s5-1">S5:1 Security &amp; PII Sanitization: TBA</h3>
+
+<h3 id="s5-2">S5:2 Architecture Summary: TBA</h3>
+
+<h3 id="s5-3">S5:3 Integration Guide: TBA</h3>
+
+<h3 id="s5-4">S5:4 Testing Guide: TBA</h3>
+
+<h3 id="s5-5">S5:5 Source Code Reference: TBA</h3>
+
+<h3 id="s5-6">S5:6 Source Code Reference: TBA</h3>
+
+<h3 id="s5-7">S5:7 Line-by-Line Deep Dive: TBA</h3>
+
+<h3 id="s5-8">S5:8 Technical Deep Dive: TBA</h3>
+
+<h3 id="s5-sysdesign">S5:9 System Design: TBA</h3>
+
+<p class="back-to-top"><a href="#top">↑ Back to top</a></p>
+
+<h2 id="s6">S6 — Embeddings <a class="h2-top" href="#top" title="Back to top">↑ top</a></h2>
+
+<p class="f-toc">
+Jump to:
+<a href="#s6-1">S6:1 Embeddings: TBA</a> ·
+<a href="#s6-2">S6:2 Architecture Summary: TBA</a> ·
+<a href="#s6-3">S6:3 Integration Guide: TBA</a> ·
+<a href="#s6-4">S6:4 Testing Guide: TBA</a> ·
+<a href="#s6-5">S6:5 Source Code Reference: TBA</a> ·
+<a href="#s6-6">S6:6 Source Code Reference: TBA</a> ·
+<a href="#s6-7">S6:7 Line-by-Line Deep Dive: TBA</a> ·
+<a href="#s6-8">S6:8 Technical Deep Dive: TBA</a> ·
+<a href="#s6-sysdesign">S6:9 System Design: TBA</a>
+</p>
+
+<h3 id="s6-1">S6:1 Embeddings: TBA</h3>
+
+<h3 id="s6-2">S6:2 Architecture Summary: TBA</h3>
+
+<h3 id="s6-3">S6:3 Integration Guide: TBA</h3>
+
+<h3 id="s6-4">S6:4 Testing Guide: TBA</h3>
+
+<h3 id="s6-5">S6:5 Source Code Reference: TBA</h3>
+
+<h3 id="s6-6">S6:6 Source Code Reference: TBA</h3>
+
+<h3 id="s6-7">S6:7 Line-by-Line Deep Dive: TBA</h3>
+
+<h3 id="s6-8">S6:8 Technical Deep Dive: TBA</h3>
+
+<h3 id="s6-sysdesign">S6:9 System Design: TBA</h3>
+
+<p class="back-to-top"><a href="#top">↑ Back to top</a></p>
+
+<h2 id="s7">S7 — Vector Database <a class="h2-top" href="#top" title="Back to top">↑ top</a></h2>
+
+<p class="f-toc">
+Jump to:
+<a href="#s7-1">S7:1 Vector Database: TBA</a> ·
+<a href="#s7-2">S7:2 Architecture Summary: TBA</a> ·
+<a href="#s7-3">S7:3 Integration Guide: TBA</a> ·
+<a href="#s7-4">S7:4 Testing Guide: TBA</a> ·
+<a href="#s7-5">S7:5 Source Code Reference: TBA</a> ·
+<a href="#s7-6">S7:6 Source Code Reference: TBA</a> ·
+<a href="#s7-7">S7:7 Line-by-Line Deep Dive: TBA</a> ·
+<a href="#s7-8">S7:8 Technical Deep Dive: TBA</a> ·
+<a href="#s7-sysdesign">S7:9 System Design: TBA</a>
+</p>
+
+<h3 id="s7-1">S7:1 Vector Database: TBA</h3>
+
+<h3 id="s7-2">S7:2 Architecture Summary: TBA</h3>
+
+<h3 id="s7-3">S7:3 Integration Guide: TBA</h3>
+
+<h3 id="s7-4">S7:4 Testing Guide: TBA</h3>
+
+<h3 id="s7-5">S7:5 Source Code Reference: TBA</h3>
+
+<h3 id="s7-6">S7:6 Source Code Reference: TBA</h3>
+
+<h3 id="s7-7">S7:7 Line-by-Line Deep Dive: TBA</h3>
+
+<h3 id="s7-8">S7:8 Technical Deep Dive: TBA</h3>
+
+<h3 id="s7-sysdesign">S7:9 System Design: TBA</h3>
+
+<p class="back-to-top"><a href="#top">↑ Back to top</a></p>
+
+<h1 class="phase-header"><span class="phase-title"><span class="phase-num">Phase 2</span>Pre-retrieval</span></h1>
+
+<h2 id="s8">S8 — Query Rewriting <a class="h2-top" href="#top" title="Back to top">↑ top</a></h2>
+
+<p class="f-toc">
+Jump to:
+<a href="#s8-1">S8:1 Query Rewriting: TBA</a> ·
+<a href="#s8-2">S8:2 Architecture Summary: TBA</a> ·
+<a href="#s8-3">S8:3 Integration Guide: TBA</a> ·
+<a href="#s8-4">S8:4 Testing Guide: TBA</a> ·
+<a href="#s8-5">S8:5 Source Code Reference: TBA</a> ·
+<a href="#s8-6">S8:6 Source Code Reference: TBA</a> ·
+<a href="#s8-7">S8:7 Line-by-Line Deep Dive: TBA</a> ·
+<a href="#s8-8">S8:8 Technical Deep Dive: TBA</a> ·
+<a href="#s8-sysdesign">S8:9 System Design: TBA</a>
+</p>
+
+<h3 id="s8-1">S8:1 Query Rewriting: TBA</h3>
+
+<h3 id="s8-2">S8:2 Architecture Summary: TBA</h3>
+
+<h3 id="s8-3">S8:3 Integration Guide: TBA</h3>
+
+<h3 id="s8-4">S8:4 Testing Guide: TBA</h3>
+
+<h3 id="s8-5">S8:5 Source Code Reference: TBA</h3>
+
+<h3 id="s8-6">S8:6 Source Code Reference: TBA</h3>
+
+<h3 id="s8-7">S8:7 Line-by-Line Deep Dive: TBA</h3>
+
+<h3 id="s8-8">S8:8 Technical Deep Dive: TBA</h3>
+
+<h3 id="s8-sysdesign">S8:9 System Design: TBA</h3>
+
+<p class="back-to-top"><a href="#top">↑ Back to top</a></p>
+
+<h1 class="phase-header"><span class="phase-title"><span class="phase-num">Phase 3</span>Retrieval</span></h1>
+
+<h2 id="s9">S9 — Hybrid Search (BM25 + Vector) <a class="h2-top" href="#top" title="Back to top">↑ top</a></h2>
+
+<p class="f-toc">
+Jump to:
+<a href="#s9-1">S9:1 Hybrid Search (BM25 + Vector): TBA</a> ·
+<a href="#s9-2">S9:2 Architecture Summary: TBA</a> ·
+<a href="#s9-3">S9:3 Integration Guide: TBA</a> ·
+<a href="#s9-4">S9:4 Testing Guide: TBA</a> ·
+<a href="#s9-5">S9:5 Source Code Reference: TBA</a> ·
+<a href="#s9-6">S9:6 Source Code Reference: TBA</a> ·
+<a href="#s9-7">S9:7 Line-by-Line Deep Dive: TBA</a> ·
+<a href="#s9-8">S9:8 Technical Deep Dive: TBA</a> ·
+<a href="#s9-sysdesign">S9:9 System Design: TBA</a>
+</p>
+
+<h3 id="s9-1">S9:1 Hybrid Search (BM25 + Vector): TBA</h3>
+
+<h3 id="s9-2">S9:2 Architecture Summary: TBA</h3>
+
+<h3 id="s9-3">S9:3 Integration Guide: TBA</h3>
+
+<h3 id="s9-4">S9:4 Testing Guide: TBA</h3>
+
+<h3 id="s9-5">S9:5 Source Code Reference: TBA</h3>
+
+<h3 id="s9-6">S9:6 Source Code Reference: TBA</h3>
+
+<h3 id="s9-7">S9:7 Line-by-Line Deep Dive: TBA</h3>
+
+<h3 id="s9-8">S9:8 Technical Deep Dive: TBA</h3>
+
+<h3 id="s9-sysdesign">S9:9 System Design: TBA</h3>
+
+<p class="back-to-top"><a href="#top">↑ Back to top</a></p>
+
+<h1 class="phase-header"><span class="phase-title"><span class="phase-num">Phase 4</span>Post-retrieval</span></h1>
+
+<h2 id="s10">S10 — Reranking <a class="h2-top" href="#top" title="Back to top">↑ top</a></h2>
+
+<p class="f-toc">
+Jump to:
+<a href="#s10-1">S10:1 Reranking: TBA</a> ·
+<a href="#s10-2">S10:2 Architecture Summary: TBA</a> ·
+<a href="#s10-3">S10:3 Integration Guide: TBA</a> ·
+<a href="#s10-4">S10:4 Testing Guide: TBA</a> ·
+<a href="#s10-5">S10:5 Source Code Reference: TBA</a> ·
+<a href="#s10-6">S10:6 Source Code Reference: TBA</a> ·
+<a href="#s10-7">S10:7 Line-by-Line Deep Dive: TBA</a> ·
+<a href="#s10-8">S10:8 Technical Deep Dive: TBA</a> ·
+<a href="#s10-sysdesign">S10:9 System Design: TBA</a>
+</p>
+
+<h3 id="s10-1">S10:1 Reranking: TBA</h3>
+
+<h3 id="s10-2">S10:2 Architecture Summary: TBA</h3>
+
+<h3 id="s10-3">S10:3 Integration Guide: TBA</h3>
+
+<h3 id="s10-4">S10:4 Testing Guide: TBA</h3>
+
+<h3 id="s10-5">S10:5 Source Code Reference: TBA</h3>
+
+<h3 id="s10-6">S10:6 Source Code Reference: TBA</h3>
+
+<h3 id="s10-7">S10:7 Line-by-Line Deep Dive: TBA</h3>
+
+<h3 id="s10-8">S10:8 Technical Deep Dive: TBA</h3>
+
+<h3 id="s10-sysdesign">S10:9 System Design: TBA</h3>
+
+<p class="back-to-top"><a href="#top">↑ Back to top</a></p>
+
+<h2 id="s11">S11 — Context Assembly <a class="h2-top" href="#top" title="Back to top">↑ top</a></h2>
+
+<p class="f-toc">
+Jump to:
+<a href="#s11-1">S11:1 Context Assembly: TBA</a> ·
+<a href="#s11-2">S11:2 Architecture Summary: TBA</a> ·
+<a href="#s11-3">S11:3 Integration Guide: TBA</a> ·
+<a href="#s11-4">S11:4 Testing Guide: TBA</a> ·
+<a href="#s11-5">S11:5 Source Code Reference: TBA</a> ·
+<a href="#s11-6">S11:6 Source Code Reference: TBA</a> ·
+<a href="#s11-7">S11:7 Line-by-Line Deep Dive: TBA</a> ·
+<a href="#s11-8">S11:8 Technical Deep Dive: TBA</a> ·
+<a href="#s11-sysdesign">S11:9 System Design: TBA</a>
+</p>
+
+<h3 id="s11-1">S11:1 Context Assembly: TBA</h3>
+
+<h3 id="s11-2">S11:2 Architecture Summary: TBA</h3>
+
+<h3 id="s11-3">S11:3 Integration Guide: TBA</h3>
+
+<h3 id="s11-4">S11:4 Testing Guide: TBA</h3>
+
+<h3 id="s11-5">S11:5 Source Code Reference: TBA</h3>
+
+<h3 id="s11-6">S11:6 Source Code Reference: TBA</h3>
+
+<h3 id="s11-7">S11:7 Line-by-Line Deep Dive: TBA</h3>
+
+<h3 id="s11-8">S11:8 Technical Deep Dive: TBA</h3>
+
+<h3 id="s11-sysdesign">S11:9 System Design: TBA</h3>
+
+<p class="back-to-top"><a href="#top">↑ Back to top</a></p>
+
+<h1 class="phase-header"><span class="phase-title"><span class="phase-num">Phase 5</span>Generation</span></h1>
+
+<h2 id="s12">S12 — LLM Generation <a class="h2-top" href="#top" title="Back to top">↑ top</a></h2>
+
+<p class="f-toc">
+Jump to:
+<a href="#s12-1">S12:1 LLM Generation: TBA</a> ·
+<a href="#s12-2">S12:2 Architecture Summary: TBA</a> ·
+<a href="#s12-3">S12:3 Integration Guide: TBA</a> ·
+<a href="#s12-4">S12:4 Testing Guide: TBA</a> ·
+<a href="#s12-5">S12:5 Source Code Reference: TBA</a> ·
+<a href="#s12-6">S12:6 Source Code Reference: TBA</a> ·
+<a href="#s12-7">S12:7 Line-by-Line Deep Dive: TBA</a> ·
+<a href="#s12-8">S12:8 Technical Deep Dive: TBA</a> ·
+<a href="#s12-sysdesign">S12:9 System Design: TBA</a>
+</p>
+
+<h3 id="s12-1">S12:1 LLM Generation: TBA</h3>
+
+<h3 id="s12-2">S12:2 Architecture Summary: TBA</h3>
+
+<h3 id="s12-3">S12:3 Integration Guide: TBA</h3>
+
+<h3 id="s12-4">S12:4 Testing Guide: TBA</h3>
+
+<h3 id="s12-5">S12:5 Source Code Reference: TBA</h3>
+
+<h3 id="s12-6">S12:6 Source Code Reference: TBA</h3>
+
+<h3 id="s12-7">S12:7 Line-by-Line Deep Dive: TBA</h3>
+
+<h3 id="s12-8">S12:8 Technical Deep Dive: TBA</h3>
+
+<h3 id="s12-sysdesign">S12:9 System Design: TBA</h3>
+
+<p class="back-to-top"><a href="#top">↑ Back to top</a></p>
+
+<h1 class="phase-header"><span class="phase-title"><span class="phase-num">Phase 6</span>Evaluation &amp; Observability</span></h1>
+
+<h2 id="s13">S13 — Evaluation <a class="h2-top" href="#top" title="Back to top">↑ top</a></h2>
+
+<p class="f-toc">
+Jump to:
+<a href="#s13-1">S13:1 Evaluation: TBA</a> ·
+<a href="#s13-2">S13:2 Architecture Summary: TBA</a> ·
+<a href="#s13-3">S13:3 Integration Guide: TBA</a> ·
+<a href="#s13-4">S13:4 Testing Guide: TBA</a> ·
+<a href="#s13-5">S13:5 Source Code Reference: TBA</a> ·
+<a href="#s13-6">S13:6 Source Code Reference: TBA</a> ·
+<a href="#s13-7">S13:7 Line-by-Line Deep Dive: TBA</a> ·
+<a href="#s13-8">S13:8 Technical Deep Dive: TBA</a> ·
+<a href="#s13-sysdesign">S13:9 System Design: TBA</a>
+</p>
+
+<h3 id="s13-1">S13:1 Evaluation: TBA</h3>
+
+<h3 id="s13-2">S13:2 Architecture Summary: TBA</h3>
+
+<h3 id="s13-3">S13:3 Integration Guide: TBA</h3>
+
+<h3 id="s13-4">S13:4 Testing Guide: TBA</h3>
+
+<h3 id="s13-5">S13:5 Source Code Reference: TBA</h3>
+
+<h3 id="s13-6">S13:6 Source Code Reference: TBA</h3>
+
+<h3 id="s13-7">S13:7 Line-by-Line Deep Dive: TBA</h3>
+
+<h3 id="s13-8">S13:8 Technical Deep Dive: TBA</h3>
+
+<h3 id="s13-sysdesign">S13:9 System Design: TBA</h3>
+
+<p class="back-to-top"><a href="#top">↑ Back to top</a></p>
+
+<h2 id="s15">S15 — Advanced Evaluation &amp; Observability <a class="h2-top" href="#top" title="Back to top">↑ top</a></h2>
+
+<p class="f-toc">
+Jump to:
+<a href="#s15-1">S15:1 Advanced Evaluation &amp; Observability: TBA</a> ·
+<a href="#s15-2">S15:2 Architecture Summary: TBA</a> ·
+<a href="#s15-3">S15:3 Integration Guide: TBA</a> ·
+<a href="#s15-4">S15:4 Testing Guide: TBA</a> ·
+<a href="#s15-5">S15:5 Source Code Reference: TBA</a> ·
+<a href="#s15-6">S15:6 Source Code Reference: TBA</a> ·
+<a href="#s15-7">S15:7 Line-by-Line Deep Dive: TBA</a> ·
+<a href="#s15-8">S15:8 Technical Deep Dive: TBA</a> ·
+<a href="#s15-sysdesign">S15:9 System Design: TBA</a>
+</p>
+
+<h3 id="s15-1">S15:1 Advanced Evaluation &amp; Observability: TBA</h3>
+
+<h3 id="s15-2">S15:2 Architecture Summary: TBA</h3>
+
+<h3 id="s15-3">S15:3 Integration Guide: TBA</h3>
+
+<h3 id="s15-4">S15:4 Testing Guide: TBA</h3>
+
+<h3 id="s15-5">S15:5 Source Code Reference: TBA</h3>
+
+<h3 id="s15-6">S15:6 Source Code Reference: TBA</h3>
+
+<h3 id="s15-7">S15:7 Line-by-Line Deep Dive: TBA</h3>
+
+<h3 id="s15-8">S15:8 Technical Deep Dive: TBA</h3>
+
+<h3 id="s15-sysdesign">S15:9 System Design: TBA</h3>
+
+<p class="back-to-top"><a href="#top">↑ Back to top</a></p>
+
+<h1 class="phase-header"><span class="phase-title"><span class="phase-num">Phase 7</span>Serving</span></h1>
+
+<h2 id="s16">S16 — Web Interfaces (FastAPI + Gradio / Streamlit) <a class="h2-top" href="#top" title="Back to top">↑ top</a></h2>
+
+<p class="f-toc">
+Jump to:
+<a href="#s16-1">S16:1 Web Interfaces (FastAPI + Gradio / Streamlit): TBA</a> ·
+<a href="#s16-2">S16:2 Architecture Summary: TBA</a> ·
+<a href="#s16-3">S16:3 Integration Guide: TBA</a> ·
+<a href="#s16-4">S16:4 Testing Guide: TBA</a> ·
+<a href="#s16-5">S16:5 Source Code Reference: TBA</a> ·
+<a href="#s16-6">S16:6 Source Code Reference: TBA</a> ·
+<a href="#s16-7">S16:7 Line-by-Line Deep Dive: TBA</a> ·
+<a href="#s16-8">S16:8 Technical Deep Dive: TBA</a> ·
+<a href="#s16-sysdesign">S16:9 System Design: TBA</a>
+</p>
+
+<h3 id="s16-1">S16:1 Web Interfaces (FastAPI + Gradio / Streamlit): TBA</h3>
+
+<h3 id="s16-2">S16:2 Architecture Summary: TBA</h3>
+
+<h3 id="s16-3">S16:3 Integration Guide: TBA</h3>
+
+<h3 id="s16-4">S16:4 Testing Guide: TBA</h3>
+
+<h3 id="s16-5">S16:5 Source Code Reference: TBA</h3>
+
+<h3 id="s16-6">S16:6 Source Code Reference: TBA</h3>
+
+<h3 id="s16-7">S16:7 Line-by-Line Deep Dive: TBA</h3>
+
+<h3 id="s16-8">S16:8 Technical Deep Dive: TBA</h3>
+
+<h3 id="s16-sysdesign">S16:9 System Design: TBA</h3>
+
+<p class="back-to-top"><a href="#top">↑ Back to top</a></p>
+
+<h1 class="phase-header"><span class="phase-title"><span class="phase-num">Phase 8</span>Agentic RAG &amp; Production Hardening</span></h1>
+
+<h2 id="s17">S17 — Agentic RAG (LangGraph) <a class="h2-top" href="#top" title="Back to top">↑ top</a></h2>
+
+<p class="f-toc">
+Jump to:
+<a href="#s17-1">S17:1 Agentic RAG (LangGraph): TBA</a> ·
+<a href="#s17-2">S17:2 Architecture Summary: TBA</a> ·
+<a href="#s17-3">S17:3 Integration Guide: TBA</a> ·
+<a href="#s17-4">S17:4 Testing Guide: TBA</a> ·
+<a href="#s17-5">S17:5 Source Code Reference: TBA</a> ·
+<a href="#s17-6">S17:6 Source Code Reference: TBA</a> ·
+<a href="#s17-7">S17:7 Line-by-Line Deep Dive: TBA</a> ·
+<a href="#s17-8">S17:8 Technical Deep Dive: TBA</a> ·
+<a href="#s17-sysdesign">S17:9 System Design: TBA</a>
+</p>
+
+<h3 id="s17-1">S17:1 Agentic RAG (LangGraph): TBA</h3>
+
+<h3 id="s17-2">S17:2 Architecture Summary: TBA</h3>
+
+<h3 id="s17-3">S17:3 Integration Guide: TBA</h3>
+
+<h3 id="s17-4">S17:4 Testing Guide: TBA</h3>
+
+<h3 id="s17-5">S17:5 Source Code Reference: TBA</h3>
+
+<h3 id="s17-6">S17:6 Source Code Reference: TBA</h3>
+
+<h3 id="s17-7">S17:7 Line-by-Line Deep Dive: TBA</h3>
+
+<h3 id="s17-8">S17:8 Technical Deep Dive: TBA</h3>
+
+<h3 id="s17-sysdesign">S17:9 System Design: TBA</h3>
+
+<p class="back-to-top"><a href="#top">↑ Back to top</a></p>
+
+<h2 id="s18">S18 — Prompt-Injection Defense (Deferred) <a class="h2-top" href="#top" title="Back to top">↑ top</a></h2>
+
+<p class="f-toc">
+Jump to:
+<a href="#s18-1">S18:1 Prompt-Injection Defense (Deferred): TBA</a> ·
+<a href="#s18-2">S18:2 Architecture Summary: TBA</a> ·
+<a href="#s18-3">S18:3 Integration Guide: TBA</a> ·
+<a href="#s18-4">S18:4 Testing Guide: TBA</a> ·
+<a href="#s18-5">S18:5 Source Code Reference: TBA</a> ·
+<a href="#s18-6">S18:6 Source Code Reference: TBA</a> ·
+<a href="#s18-7">S18:7 Line-by-Line Deep Dive: TBA</a> ·
+<a href="#s18-8">S18:8 Technical Deep Dive: TBA</a> ·
+<a href="#s18-sysdesign">S18:9 System Design: TBA</a>
+</p>
+
+<h3 id="s18-1">S18:1 Prompt-Injection Defense (Deferred): TBA</h3>
+
+<h3 id="s18-2">S18:2 Architecture Summary: TBA</h3>
+
+<h3 id="s18-3">S18:3 Integration Guide: TBA</h3>
+
+<h3 id="s18-4">S18:4 Testing Guide: TBA</h3>
+
+<h3 id="s18-5">S18:5 Source Code Reference: TBA</h3>
+
+<h3 id="s18-6">S18:6 Source Code Reference: TBA</h3>
+
+<h3 id="s18-7">S18:7 Line-by-Line Deep Dive: TBA</h3>
+
+<h3 id="s18-8">S18:8 Technical Deep Dive: TBA</h3>
+
+<h3 id="s18-sysdesign">S18:9 System Design: TBA</h3>
+
+<p class="back-to-top"><a href="#top">↑ Back to top</a></p>
+
+<h2 id="s19">S19 — Guardrails (Deferred) <a class="h2-top" href="#top" title="Back to top">↑ top</a></h2>
+
+<p class="f-toc">
+Jump to:
+<a href="#s19-1">S19:1 Guardrails (Deferred): TBA</a> ·
+<a href="#s19-2">S19:2 Architecture Summary: TBA</a> ·
+<a href="#s19-3">S19:3 Integration Guide: TBA</a> ·
+<a href="#s19-4">S19:4 Testing Guide: TBA</a> ·
+<a href="#s19-5">S19:5 Source Code Reference: TBA</a> ·
+<a href="#s19-6">S19:6 Source Code Reference: TBA</a> ·
+<a href="#s19-7">S19:7 Line-by-Line Deep Dive: TBA</a> ·
+<a href="#s19-8">S19:8 Technical Deep Dive: TBA</a> ·
+<a href="#s19-sysdesign">S19:9 System Design: TBA</a>
+</p>
+
+<h3 id="s19-1">S19:1 Guardrails (Deferred): TBA</h3>
+
+<h3 id="s19-2">S19:2 Architecture Summary: TBA</h3>
+
+<h3 id="s19-3">S19:3 Integration Guide: TBA</h3>
+
+<h3 id="s19-4">S19:4 Testing Guide: TBA</h3>
+
+<h3 id="s19-5">S19:5 Source Code Reference: TBA</h3>
+
+<h3 id="s19-6">S19:6 Source Code Reference: TBA</h3>
+
+<h3 id="s19-7">S19:7 Line-by-Line Deep Dive: TBA</h3>
+
+<h3 id="s19-8">S19:8 Technical Deep Dive: TBA</h3>
+
+<h3 id="s19-sysdesign">S19:9 System Design: TBA</h3>
+
+<p class="back-to-top"><a href="#top">↑ Back to top</a></p>
+
+<h2 id="s20">S20 — CI Eval Gate (Deferred) <a class="h2-top" href="#top" title="Back to top">↑ top</a></h2>
+
+<p class="f-toc">
+Jump to:
+<a href="#s20-1">S20:1 CI Eval Gate (Deferred): TBA</a> ·
+<a href="#s20-2">S20:2 Architecture Summary: TBA</a> ·
+<a href="#s20-3">S20:3 Integration Guide: TBA</a> ·
+<a href="#s20-4">S20:4 Testing Guide: TBA</a> ·
+<a href="#s20-5">S20:5 Source Code Reference: TBA</a> ·
+<a href="#s20-6">S20:6 Source Code Reference: TBA</a> ·
+<a href="#s20-7">S20:7 Line-by-Line Deep Dive: TBA</a> ·
+<a href="#s20-8">S20:8 Technical Deep Dive: TBA</a> ·
+<a href="#s20-sysdesign">S20:9 System Design: TBA</a>
+</p>
+
+<h3 id="s20-1">S20:1 CI Eval Gate (Deferred): TBA</h3>
+
+<h3 id="s20-2">S20:2 Architecture Summary: TBA</h3>
+
+<h3 id="s20-3">S20:3 Integration Guide: TBA</h3>
+
+<h3 id="s20-4">S20:4 Testing Guide: TBA</h3>
+
+<h3 id="s20-5">S20:5 Source Code Reference: TBA</h3>
+
+<h3 id="s20-6">S20:6 Source Code Reference: TBA</h3>
+
+<h3 id="s20-7">S20:7 Line-by-Line Deep Dive: TBA</h3>
+
+<h3 id="s20-8">S20:8 Technical Deep Dive: TBA</h3>
+
+<h3 id="s20-sysdesign">S20:9 System Design: TBA</h3>
+
+<p class="back-to-top"><a href="#top">↑ Back to top</a></p>
+
+<h2 id="s21">S21 — API Auth &amp; RBAC (Deferred) <a class="h2-top" href="#top" title="Back to top">↑ top</a></h2>
+
+<p class="f-toc">
+Jump to:
+<a href="#s21-1">S21:1 API Auth &amp; RBAC (Deferred): TBA</a> ·
+<a href="#s21-2">S21:2 Architecture Summary: TBA</a> ·
+<a href="#s21-3">S21:3 Integration Guide: TBA</a> ·
+<a href="#s21-4">S21:4 Testing Guide: TBA</a> ·
+<a href="#s21-5">S21:5 Source Code Reference: TBA</a> ·
+<a href="#s21-6">S21:6 Source Code Reference: TBA</a> ·
+<a href="#s21-7">S21:7 Line-by-Line Deep Dive: TBA</a> ·
+<a href="#s21-8">S21:8 Technical Deep Dive: TBA</a> ·
+<a href="#s21-sysdesign">S21:9 System Design: TBA</a>
+</p>
+
+<h3 id="s21-1">S21:1 API Auth &amp; RBAC (Deferred): TBA</h3>
+
+<h3 id="s21-2">S21:2 Architecture Summary: TBA</h3>
+
+<h3 id="s21-3">S21:3 Integration Guide: TBA</h3>
+
+<h3 id="s21-4">S21:4 Testing Guide: TBA</h3>
+
+<h3 id="s21-5">S21:5 Source Code Reference: TBA</h3>
+
+<h3 id="s21-6">S21:6 Source Code Reference: TBA</h3>
+
+<h3 id="s21-7">S21:7 Line-by-Line Deep Dive: TBA</h3>
+
+<h3 id="s21-8">S21:8 Technical Deep Dive: TBA</h3>
+
+<h3 id="s21-sysdesign">S21:9 System Design: TBA</h3>
+
+<p class="back-to-top"><a href="#top">↑ Back to top</a></p>
+
+</body>
+</html>
